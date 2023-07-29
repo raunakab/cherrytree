@@ -1,0 +1,10 @@
+[package]
+name = "pettree"
+version = "0.1.0"
+edition = "2021"
+description = "A small and efficient tree implementation"
+
+[dependencies]
+anyhow = { version = "1.0.72", features = ["backtrace"] }
+petgraph = "0.6.3"
+slotmap = "1.0.6"
