@@ -1,4 +1,4 @@
-name: On Pull Request to Master
+name: On PR Targeting Master
 
 on:
   pull_request:
