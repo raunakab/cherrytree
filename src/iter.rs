@@ -1,7 +1,11 @@
-use slotmap::Key;
-use slotmap::basic::IterMut;
-use slotmap::basic::IntoIter;
-use slotmap::basic::Iter;
+use slotmap::{
+    basic::{
+        IntoIter,
+        Iter,
+        IterMut,
+    },
+    Key,
+};
 
 use crate::Tree;
 
