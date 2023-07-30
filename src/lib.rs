@@ -229,15 +229,6 @@ where
         todo!()
     }
 
-    // /// Switch the parents of two keys.
-    // ///
-    // /// After calling this method, the parent of `key1` will be `key2`'s
-    // /// original parent and the parent of `key2` will be `key1`'s original
-    // /// parent.
-    // pub fn switch(&mut self, _: K, _: K) -> Option<()> {
-    //     todo!()
-    // }
-
     /// Clears this [`Tree`] instance of *all* its values. Keeps the allocated
     /// memory for reuse.
     pub fn clear(&mut self) {
