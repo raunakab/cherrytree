@@ -31,24 +31,15 @@ fn main() {
     let child_node_1 = tree.get(child_key_1).unwrap();
     assert_eq!(*child_node_1.value, 1);
     assert_eq!(child_node_1.parent_key, Some(root_key));
-    assert_eq!(
-        child_node_1.child_keys.collect::<Vec<_>>().len(),
-        0,
-    );
+    assert_eq!(child_node_1.child_keys.collect::<Vec<_>>().len(), 0,);
 
     let child_node_2 = tree.get(child_key_2).unwrap();
     assert_eq!(*child_node_2.value, 2);
     assert_eq!(child_node_2.parent_key, Some(root_key));
-    assert_eq!(
-        child_node_2.child_keys.collect::<Vec<_>>().len(),
-        0,
-    );
+    assert_eq!(child_node_2.child_keys.collect::<Vec<_>>().len(), 0,);
 
     let child_node_3 = tree.get(child_key_3).unwrap();
     assert_eq!(*child_node_3.value, 3);
     assert_eq!(child_node_3.parent_key, Some(root_key));
-    assert_eq!(
-        child_node_3.child_keys.collect::<Vec<_>>().len(),
-        0,
-    );
+    assert_eq!(child_node_3.child_keys.collect::<Vec<_>>().len(), 0,);
 }

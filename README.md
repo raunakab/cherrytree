@@ -1,7 +1,9 @@
 # `pettree`
-A small and simple tree implementation.
+A small, simple, and correct tree implementation.
 
 ## Example:
+The following program will show you just some of the ways that you can interact with a [`Tree`], the data-structure responsible for providing an arbitrary-arity-tree implementation.
+
 ```rust
 use pettree::Tree;
 use pettree::Node;
@@ -40,3 +42,7 @@ fn main() {
     let node_mut: Option<NodeMut> = tree.get_mut(child_key_3);
 }
 ```
+
+More examples of programs can be found [in the examples directory](./examples).
+Each example file is prefixed with a number and followed by a short explanation on what that example showcases (e.g., `1_this_example_does_xyz.rs`, `2_this_example_does_abc.rs`).
+It is recommended to read through the examples in numerical order.
