@@ -100,13 +100,14 @@ where
 {
     // Check methods:
 
-    /// Checks if this instance of [`Tree`] has the given `key` inside of it.
+    /// Checks whether or not this instance of [`Tree`] has the given `key`
+    /// inside of it.
     pub fn contains(&self, key: K) -> bool {
         self.values.contains_key(key)
     }
 
-    /// Returns `true` iff this [`Tree`] instance is empty (i.e., has no values
-    /// inside of it). Otherwise, returns `false`.
+    /// Checks whether or not this [`Tree`] instance is empty (i.e., has no
+    /// values inside of it).
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
     }
@@ -145,8 +146,7 @@ where
     }
 
     /// Removes the value corresponding to the given `key` from this [`Tree`]
-    /// instance. Also removes *all* of its children values (so that no memory
-    /// leaks will occur).
+    /// instance as well as *all* of its children values.
     ///
     /// If this [`Tree`] instance does not contain the given `key`, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
@@ -181,6 +181,15 @@ where
                     })
             }
         })
+    }
+
+    /// Switch the parents of two keys.
+    ///
+    /// After calling this method, the parent of `key1` will be `key2`'s
+    /// original parent and the parent of `key2` will be `key1`'s original
+    /// parent.
+    pub fn switch(&mut self, _: K, _: K) -> Option<()> {
+        todo!()
     }
 
     /// Clears this [`Tree`] instance of *all* its values. Keeps the allocated
