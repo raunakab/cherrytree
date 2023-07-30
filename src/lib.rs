@@ -1,8 +1,63 @@
 #![warn(missing_docs)]
-#![doc = include_str!("../README.md")]
 
-/// Iterator implementations for [`Tree`].
-pub mod iter;
+//! A small, simple, and correct tree implementation.
+//!
+//! # Overview:
+//! `pettree` is a library which exports safe and correct APIs for interacting
+//! with tree data structures. The main way it does this is by exporting a
+//! generic [`Tree`] type with associated methods to read and write to it.
+//! ...But what exactly is a tree?
+//!
+//! ## Theory:
+//! Formally, a [tree](https://en.wikipedia.org/wiki/Tree_(data_structure)) is
+//! just a [graph](https://en.wikipedia.org/wiki/Graph_(discrete_mathematics)).
+//! However, it's not just any type of graph; a tree is a special type of graph
+//! that enforces certain invariants on the structure of its nodes and edges.
+//!
+//! Namely, the following invariants must be held:
+//! - Each node (except for one) must have exactly 1 other node pointing to it
+//! - The remaining node must have 0 other nodes pointing to it
+//!
+//! If any arbitrary graph meets the above requirements, then it can also be
+//! classified as a tree!
+//!
+//! ## Implementation:
+//! Therefore, internally, the [`Tree`] type is just a graph with the above
+//! invariants enforced. Any mutations or modifications to this [`Tree`] will
+//! *continue* to enforce these invariants, thus ensuring the end-user of a safe
+//! and correct implementation of a tree for whatever purpose they desire.
+//!
+//! # Example:
+//! ```
+//! # fn main() {
+//! use pettree::{
+//!     Node,
+//!     Tree,
+//! };
+//! use slotmap::DefaultKey;
+//!
+//! // Create a default, empty tree:
+//! let mut tree = Tree::<DefaultKey, usize>::default();
+//!
+//! // Insert a root value:
+//! let root_key = tree.insert_root(0);
+//!
+//! // Insert some children values:
+//! let child_key_1 = tree.insert(root_key, 1).unwrap();
+//! let child_key_2 = tree.insert(root_key, 2).unwrap();
+//! let child_key_3 = tree.insert(root_key, 3).unwrap();
+//!
+//! // Get an immutable reference to one of the children's value:
+//! let child_value_1 = tree.get(child_key_1).unwrap();
+//! assert_eq!(*child_value_1.value, 1);
+//!
+//! // Or get a mutable reference to one of the children's value:
+//! let child_value_2 = tree.get_mut(child_key_2).unwrap();
+//! *child_value_2.value = 100;
+//! let child_value_2 = tree.get(child_key_2).unwrap();
+//! assert_eq!(*child_value_2.value, 100);
+//! # }
+//! ```
 
 use std::collections::BTreeMap;
 
@@ -13,6 +68,9 @@ use petgraph::{
 };
 use slotmap::{
     basic::{
+        IntoIter,
+        Iter,
+        IterMut,
         Keys,
         Values,
         ValuesMut,
@@ -21,7 +79,6 @@ use slotmap::{
     SlotMap,
 };
 
-/// # Purpose:
 /// The data-structure containing all the data required to implement a fully
 /// function arbitrary-arity-tree.
 ///
@@ -37,33 +94,25 @@ where
     root_key: Option<K>,
 }
 
-/// # Purpose:
-/// Checking/assertion methods.
 impl<K, V> Tree<K, V>
 where
     K: Key,
 {
-    /// # Purpose:
+    // Check methods:
+
     /// Checks if this instance of [`Tree`] has the given `key` inside of it.
     pub fn contains(&self, key: K) -> bool {
         self.values.contains_key(key)
     }
 
-    /// # Purpose:
     /// Returns `true` iff this [`Tree`] instance is empty (i.e., has no values
     /// inside of it). Otherwise, returns `false`.
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
     }
-}
 
-/// # Purpose:
-/// Insertion/removal methods.
-impl<K, V> Tree<K, V>
-where
-    K: Key,
-{
-    /// # Purpose:
+    // Insertion/removal methods:
+
     /// Inserts a new root value into this [`Tree`] instance.
     ///
     /// If this [`Tree`] instance already contains a root value (and possibly
@@ -81,7 +130,6 @@ where
         root_key
     }
 
-    /// # Purpose:
     /// Inserts a new child value into this [`Tree`] instance.
     ///
     /// If this [`Tree`] instance does not contain the given `parent_key`, then
@@ -96,7 +144,6 @@ where
         })
     }
 
-    /// # Purpose:
     /// Removes the value corresponding to the given `key` from this [`Tree`]
     /// instance. Also removes *all* of its children values (so that no memory
     /// leaks will occur).
@@ -136,7 +183,6 @@ where
         })
     }
 
-    /// # Purpose:
     /// Clears this [`Tree`] instance of *all* its values. Keeps the allocated
     /// memory for reuse.
     pub fn clear(&mut self) {
@@ -145,42 +191,32 @@ where
         self.down_map.clear();
         self.root_key = None;
     }
-}
 
-/// # Purpose:
-/// Getter/setter methods.
-impl<K, V> Tree<K, V>
-where
-    K: Key,
-{
-    /// # Purpose:
+    // Getter/setter methods:
+
     /// Returns the number of elements in this [`Tree`] instance.
     pub fn len(&self) -> usize {
         self.values.len()
     }
 
-    /// # Purpose:
     /// Returns an owned iterator over all the keys inside of this [`Tree`]
     /// instance.
     pub fn keys(&self) -> Keys<'_, K, V> {
         self.values.keys()
     }
 
-    /// # Purpose:
     /// Returns an immutable iterator over all the values inside of this
     /// [`Tree`] instance.
     pub fn values(&self) -> Values<'_, K, V> {
         self.values.values()
     }
 
-    /// # Purpose:
     /// Returns a mutable iterator over all the values inside of this [`Tree`]
     /// instance.
     pub fn values_mut(&mut self) -> ValuesMut<'_, K, V> {
         self.values.values_mut()
     }
 
-    /// # Purpose:
     /// Gets the [`Node`] entry that corresponds to the given `key`.
     ///
     /// If the given `key` does not exist in this [`Tree`] instance, then
@@ -199,7 +235,6 @@ where
         })
     }
 
-    /// # Purpose:
     /// Gets the [`NodeMut`] entry that corresponds to the given `key`.
     ///
     /// If the given `key` does not exist in this [`Tree`] instance, then
@@ -218,7 +253,6 @@ where
         })
     }
 
-    /// # Purpose:
     /// Returns a [`Vec`] of all the descendent keys of the given `key`
     /// (including the given `key` itself).
     ///
@@ -243,10 +277,44 @@ where
             descendent_keys
         })
     }
+
+    // Iterator methods:
+
+    /// Create an immutable iterator over the key-value pairs inside of this
+    /// [`Tree`] instance.
+    ///
+    /// The order of iteration is arbitrary. It will not be guaranteed to be
+    /// depth-first, breadth-first, in-order, etc.
+    pub fn iter(&self) -> Iter<'_, K, V> {
+        self.values.iter()
+    }
+
+    /// Create a mutable iterator over the key-value pairs inside of this
+    /// [`Tree`] instance.
+    ///
+    /// Note that this iterator will yield elements of type `(K, &mut V)`.
+    /// Namely, this function only provides mutable access to the values, not
+    /// the keys!
+    ///
+    /// The order of iteration is arbitrary. It will not be guaranteed to be
+    /// depth-first, breadth-first, in-order, etc.
+    pub fn iter_mut(&mut self) -> IterMut<'_, K, V> {
+        self.values.iter_mut()
+    }
 }
 
-/// # Purpose:
-/// Default creation of a [`Tree`] instance.
+impl<K, V> IntoIterator for Tree<K, V>
+where
+    K: Key,
+{
+    type IntoIter = IntoIter<K, V>;
+    type Item = <Self::IntoIter as IntoIterator>::Item;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.values.into_iter()
+    }
+}
+
 impl<K, V> Default for Tree<K, V>
 where
     K: Key,
@@ -261,9 +329,8 @@ where
     }
 }
 
-/// # Purpose:
-/// A [`Node`] is essentially a container that wraps over an immutable reference
-/// to the actual underlying value that is stored.
+/// A container that wraps over an immutable reference to to the actual
+/// underlying value that is stored.
 ///
 /// It also contains:
 /// - this value's parent key ([`None`] if this value is the root value)
@@ -282,9 +349,8 @@ pub struct Node<'a, K, V> {
     pub child_keys: Neighbors<'a, K, Directed>,
 }
 
-/// # Purpose:
-/// A [`Node`] is essentially a container that wraps over a mutable reference to
-/// the actual underlying value that is stored.
+/// A container that wraps over a mutable reference to the actual underlying
+/// value that is stored.
 ///
 /// It also contains:
 /// - this value's parent key ([`None`] if this value is the root value)
