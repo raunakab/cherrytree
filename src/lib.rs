@@ -84,6 +84,13 @@ use slotmap::{
 ///
 /// Exposes a number of APIs that allow the end-user to manipulate this [`Tree`]
 /// (e.g., such as adding children values, removing values, etc.).
+///
+/// Internally, this [`Tree`] type uses a [`SlotMap`] to keep a track of each
+/// value in the tree. This gives us the ability to index into the [`Tree`] (in
+/// constant time) and retrieve whatever value is stored!
+///
+/// Since indexing requires a key, every insertion into a [`Tree`] will produce
+/// a *unique* key that can be used to identify the value being inserted.
 pub struct Tree<K, V>
 where
     K: Key,
@@ -120,11 +127,26 @@ where
     /// some children values) inside of it, then this [`Tree`] instance is
     /// first fully cleared and replaced with the new, singular root value.
     pub fn insert_root(&mut self, value: V) -> K {
+        self.insert_root_with(|_| value)
+    }
+
+    /// Inserts a new root value into this [`Tree`] instance.
+    ///
+    /// The key where the value will be stored is passed into `f`. This is
+    /// useful to store values that contain their own key.
+    ///
+    /// If this [`Tree`] instance already contains a root value (and possibly
+    /// some children values) inside of it, then this [`Tree`] instance is
+    /// first fully cleared and replaced with the new, singular root value.
+    pub fn insert_root_with<F>(&mut self, f: F) -> K
+    where
+        F: FnOnce(K) -> V,
+    {
         if self.root_key.is_some() {
             self.clear();
         };
 
-        let root_key = self.values.insert(value);
+        let root_key = self.values.insert_with_key(f);
         self.down_map.add_node(root_key);
         self.root_key = Some(root_key);
 
@@ -137,8 +159,23 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// new key corresponding to this new child value.
     pub fn insert(&mut self, parent_key: K, value: V) -> Option<K> {
+        self.insert_with(parent_key, |_| value)
+    }
+
+    /// Inserts a new child value into this [`Tree`] instance.
+    ///
+    /// The key where the value will be stored is passed into `f`. This is
+    /// useful to store values that contain their own key.
+    ///
+    /// If this [`Tree`] instance does not contain the given `parent_key`, then
+    /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
+    /// new key corresponding to this new child value.
+    pub fn insert_with<F>(&mut self, parent_key: K, f: F) -> Option<K>
+    where
+        F: FnOnce(K) -> V,
+    {
         self.contains(parent_key).then(|| {
-            let key = self.values.insert(value);
+            let key = self.values.insert_with_key(f);
             self.up_map.insert(key, parent_key);
             self.down_map.add_edge(parent_key, key, ());
             key
@@ -183,14 +220,23 @@ where
         })
     }
 
-    /// Switch the parents of two keys.
+    /// Rebase the subtree rooted at `key` to be a child underneath the subtree
+    /// rooted at `parent_key`.
     ///
-    /// After calling this method, the parent of `key1` will be `key2`'s
-    /// original parent and the parent of `key2` will be `key1`'s original
-    /// parent.
-    pub fn switch(&mut self, _: K, _: K) -> Option<()> {
+    /// After performing this operation, the new parent of `key` will be
+    /// `parent_key`.
+    pub fn rebase(&mut self, key: K, parent_key: K) -> Option<()> {
         todo!()
     }
+
+    // /// Switch the parents of two keys.
+    // ///
+    // /// After calling this method, the parent of `key1` will be `key2`'s
+    // /// original parent and the parent of `key2` will be `key1`'s original
+    // /// parent.
+    // pub fn switch(&mut self, _: K, _: K) -> Option<()> {
+    //     todo!()
+    // }
 
     /// Clears this [`Tree`] instance of *all* its values. Keeps the allocated
     /// memory for reuse.
