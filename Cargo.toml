@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "A small, simple, and correct tree implementation."
 repository = "https://github.com/raunakab/pettree"
+license-file = "LICENSE-BSD-3-CLAUSE"
 
 [dependencies]
 petgraph = "0.6.3"
