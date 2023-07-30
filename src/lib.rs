@@ -1,6 +1,9 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
 
+/// Iterator implementations for [`Tree`].
+pub mod iter;
+
 use std::collections::BTreeMap;
 
 use petgraph::{
@@ -244,7 +247,7 @@ where
 
 /// # Purpose:
 /// Default creation of a [`Tree`] instance.
-impl<K, D> Default for Tree<K, D>
+impl<K, V> Default for Tree<K, V>
 where
     K: Key,
 {
