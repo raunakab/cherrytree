@@ -59,7 +59,10 @@
 //! # }
 //! ```
 
-use std::collections::BTreeMap;
+use std::collections::{
+    BTreeMap,
+    BTreeSet,
+};
 
 use petgraph::{
     graphmap::Neighbors,
@@ -225,7 +228,7 @@ where
     ///
     /// After performing this operation, the new parent of `key` will be
     /// `parent_key`.
-    pub fn rebase(&mut self, key: K, parent_key: K) -> Option<()> {
+    pub fn rebase(&mut self, _: K, _: K) -> Option<()> {
         todo!()
     }
 
@@ -324,6 +327,70 @@ where
         })
     }
 
+    /// Gets the [`Relationship`] status between two keys.
+    ///
+    /// If either `key1` or `key2` do not exist in this [`Tree`] instance, then
+    /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
+    /// relationship between the two keys.
+    pub fn get_relationship(&self, key1: K, key2: K) -> Option<Relationship<K>> {
+        let key1_exists = self.contains(key1);
+        let key2_exists = self.contains(key2);
+        let both_keys_exist = key1_exists && key2_exists;
+
+        fn find_common_ancestor<K, V>(tree: &Tree<K, V>, key1: K, key2: K) -> Relationship<K>
+        where
+            K: Key,
+        {
+            if key1 == key2 {
+                Relationship::Same
+            } else {
+                let mut current_parent_key = tree.get(key1).unwrap().parent_key;
+                let mut path = BTreeSet::default();
+
+                loop {
+                    match current_parent_key {
+                        Some(parent_key) if parent_key == key2 => {
+                            return Relationship::Ancestral {
+                                ancestor_key: key2,
+                                descendent_key: key1,
+                            }
+                        }
+                        Some(parent_key) => {
+                            path.insert(parent_key);
+                            current_parent_key = tree.get(parent_key).unwrap().parent_key;
+                        }
+                        None => break,
+                    }
+                }
+
+                let mut current_parent_key = tree.get(key2).unwrap().parent_key;
+
+                loop {
+                    match current_parent_key {
+                        Some(parent_key) if parent_key == key1 => {
+                            return Relationship::Ancestral {
+                                ancestor_key: key1,
+                                descendent_key: key2,
+                            }
+                        }
+                        Some(parent_key) => {
+                            if path.contains(&parent_key) {
+                                return Relationship::Siblings {
+                                    common_ancestor_key: parent_key,
+                                };
+                            } else {
+                                current_parent_key = tree.get(parent_key).unwrap().parent_key;
+                            }
+                        }
+                        None => unreachable!(),
+                    }
+                }
+            }
+        }
+
+        both_keys_exist.then(|| find_common_ancestor(self, key1, key2))
+    }
+
     // Iterator methods:
 
     /// Create an immutable iterator over the key-value pairs inside of this
@@ -413,4 +480,39 @@ pub struct NodeMut<'a, K, V> {
 
     /// The children keys of this value.
     pub child_keys: Neighbors<'a, K, Directed>,
+}
+
+/// A description of the relationship between two keys in a [`Tree`] instance.
+///
+/// Each variant of a [`Relationship`] is based off of familial relationships
+/// (i.e., parents, grandparent, great-grandparents are all your ancestors).
+pub enum Relationship<K> {
+    /// The two keys are the exact same.
+    Same,
+
+    /// The two keys are related through the same lineage. Namely, the
+    /// `ancestor_key` can be found by traversing up the `descendent_key`'s
+    /// parental lineage.
+    ///
+    /// In simpler terms, the `ancestor_key` is the parent of the
+    /// `descendent_key`, OR the parent's parent of the `descendent_key`, OR
+    /// the parent's parent's parent of the `descendent_key`, etc.
+    Ancestral {
+        /// The ancestor in this relationship.
+        ancestor_key: K,
+
+        /// The descendent in this relationship.
+        descendent_key: K,
+    },
+
+    /// The two keys are not related through the same lineage. If you traverse
+    /// up either key's lineage, you will *not* encounter the other.
+    ///
+    /// However, since all keys' parental lineage converges to one singular key,
+    /// these two keys are related through some common ancestor. Therefore, they
+    /// are considered "siblings".
+    Siblings {
+        /// The common ancestor that both of these keys originate from.
+        common_ancestor_key: K,
+    },
 }
