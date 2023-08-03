@@ -59,6 +59,8 @@
 //! # }
 //! ```
 
+// mod inner_tree;
+
 use std::collections::{
     BTreeMap,
     BTreeSet,
@@ -94,14 +96,16 @@ use slotmap::{
 ///
 /// Since indexing requires a key, every insertion into a [`Tree`] will produce
 /// a *unique* key that can be used to identify the value being inserted.
-pub struct Tree<K, V>
+#[derive(Default)]
+pub struct Tree<K, V>(Option<InnerTree<K, V>>)
 where
-    K: Key,
-{
+    K: Key;
+
+struct InnerTree<K, V> where K: Key {
+    root_key: K,
     values: SlotMap<K, V>,
     up_map: BTreeMap<K, K>,
     down_map: GraphMap<K, (), Directed>,
-    root_key: Option<K>,
 }
 
 impl<K, V> Tree<K, V>
@@ -113,13 +117,13 @@ where
     /// Checks whether or not this instance of [`Tree`] has the given `key`
     /// inside of it.
     pub fn contains(&self, key: K) -> bool {
-        self.values.contains_key(key)
+        self.0.as_ref().map(|inner_tree| inner_tree.values.contains_key(key)).unwrap_or(false)
     }
 
     /// Checks whether or not this [`Tree`] instance is empty (i.e., has no
     /// values inside of it).
     pub fn is_empty(&self) -> bool {
-        self.values.is_empty()
+        self.0.as_ref().map(|inner_tree| inner_tree.values.is_empty()).unwrap_or(true)
     }
 
     // Insertion/removal methods:
@@ -145,15 +149,15 @@ where
     where
         F: FnOnce(K) -> V,
     {
-        if self.root_key.is_some() {
-            self.clear();
-        };
+        // if self.root_key.is_some() {
+        //     self.clear();
+        // };
+        // let root_key = self.values.insert_with_key(f);
+        // self.down_map.add_node(root_key);
+        // self.root_key = Some(root_key);
+        // root_key
 
-        let root_key = self.values.insert_with_key(f);
-        self.down_map.add_node(root_key);
-        self.root_key = Some(root_key);
-
-        root_key
+        todo!()
     }
 
     /// Inserts a new child value into this [`Tree`] instance.
@@ -177,12 +181,14 @@ where
     where
         F: FnOnce(K) -> V,
     {
-        self.contains(parent_key).then(|| {
-            let key = self.values.insert_with_key(f);
-            self.up_map.insert(key, parent_key);
-            self.down_map.add_edge(parent_key, key, ());
-            key
-        })
+        // self.contains(parent_key).then(|| {
+        //     let key = self.values.insert_with_key(f);
+        //     self.up_map.insert(key, parent_key);
+        //     self.down_map.add_edge(parent_key, key, ());
+        //     key
+        // })
+
+        todo!()
     }
 
     /// Removes the value corresponding to the given `key` from this [`Tree`]
@@ -197,30 +203,33 @@ where
     /// instance. If you do not have a hint, then provide [`None`] as an
     /// argument.
     pub fn remove(&mut self, key: K, size_hint: Option<usize>) -> Option<V> {
-        let remove_single_forced = |tree: &mut Tree<_, _>, key| {
-            let value = tree.values.remove(key).unwrap();
+        todo!()
 
-            tree.up_map.remove(&key);
-            tree.down_map.remove_node(key);
+        // let remove_single_forced = |tree: &mut Tree<_, _>, key| {
+        //     let value = tree.values.remove(key).unwrap();
 
-            value
-        };
+        //     tree.up_map.remove(&key);
+        //     tree.down_map.remove_node(key);
 
-        self.root_key.and_then(|root_key| {
-            if key == root_key {
-                let value = remove_single_forced(self, key);
-                self.clear();
-                Some(value)
-            } else {
-                self.descendent_keys_inclusive(key, size_hint)
-                    .map(|descendent_keys| {
-                        descendent_keys.iter().skip(1).for_each(|&descendent_key| {
-                            remove_single_forced(self, descendent_key);
-                        });
-                        remove_single_forced(self, key)
-                    })
-            }
-        })
+        //     value
+        // };
+
+        // self.root_key.and_then(|root_key| {
+        //     if key == root_key {
+        //         let value = remove_single_forced(self, key);
+        //         self.clear();
+        //         Some(value)
+        //     }
+        //     else {
+        //         self.descendent_keys_inclusive(key, size_hint)
+        //             .map(|descendent_keys| {
+        //                 descendent_keys.iter().skip(1).for_each(|&descendent_key| {
+        //                     remove_single_forced(self, descendent_key);
+        //                 });
+        //                 remove_single_forced(self, key)
+        //             })
+        //     }
+        // })
     }
 
     /// Rebase the subtree rooted at `key` to be a child underneath the subtree
@@ -228,42 +237,83 @@ where
     ///
     /// After performing this operation, the new parent of `key` will be
     /// `parent_key`.
-    pub fn rebase(&mut self, _: K, _: K) -> Option<()> {
+    pub fn rebase(&mut self, key: K, parent_key: K) -> bool {
+        // self.get_relationship(key, parent_key)
+        //     .map_or(false, |relationship| {
+        //         if let Relationship::Ancestral { ancestor_key, descendent_key } = relationship {
+        //             if parent_key == ancestor_key {
+        //                 let current_parent_key = *self.up_map.get(&key).unwrap();
+
+        //                 if current_parent_key != parent_key {
+        //                     self.down_map.remove_edge(current_parent_key, key);
+        //                     self.down_map.add_edge(parent_key, key, ());
+        //                     *self.up_map.get_mut(&key).unwrap() = parent_key;
+        //                 }
+        //             }
+
+        //             else if parent_key == descendent_key {
+        //                 // let x = self.up_map.get(&key);
+        //                 // match x {
+        //                 //     Some(_) => todo!(),
+        //                 //     None => todo!(),
+        //                 // }
+        //             }
+
+        //             else {
+        //                 unreachable!()
+        //             }
+        //         }
+
+        //         else if let Relationship::Siblings { .. } = relationship {
+        //             let current_parent_key = *self.up_map.get(&key).unwrap();
+
+        //             self.down_map.remove_edge(current_parent_key, key);
+        //             self.down_map.add_edge(parent_key, key, ());
+        //             *self.up_map.get_mut(&key).unwrap() = parent_key;
+        //         };
+
+        //         true
+        //     })
         todo!()
     }
 
     /// Clears this [`Tree`] instance of *all* its values. Keeps the allocated
     /// memory for reuse.
     pub fn clear(&mut self) {
-        self.values.clear();
-        self.up_map.clear();
-        self.down_map.clear();
-        self.root_key = None;
+        todo!()
+        // self.values.clear();
+        // self.up_map.clear();
+        // self.down_map.clear();
+        // self.root_key = None;
     }
 
     // Getter/setter methods:
 
     /// Returns the number of elements in this [`Tree`] instance.
     pub fn len(&self) -> usize {
-        self.values.len()
+        // self.values.len()
+        todo!()
     }
 
     /// Returns an owned iterator over all the keys inside of this [`Tree`]
     /// instance.
     pub fn keys(&self) -> Keys<'_, K, V> {
-        self.values.keys()
+        // self.values.keys()
+        todo!()
     }
 
     /// Returns an immutable iterator over all the values inside of this
     /// [`Tree`] instance.
     pub fn values(&self) -> Values<'_, K, V> {
-        self.values.values()
+        // self.values.values()
+        todo!()
     }
 
     /// Returns a mutable iterator over all the values inside of this [`Tree`]
     /// instance.
     pub fn values_mut(&mut self) -> ValuesMut<'_, K, V> {
-        self.values.values_mut()
+        // self.values.values_mut()
+        todo!()
     }
 
     /// Gets the [`Node`] entry that corresponds to the given `key`.
@@ -272,16 +322,17 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// [`Node`] entry.
     pub fn get(&self, key: K) -> Option<Node<'_, K, V>> {
-        self.values.get(key).map(|value| {
-            let parent_key = self.up_map.get(&key).copied();
-            let child_keys = self.down_map.neighbors(key);
+        // self.values.get(key).map(|value| {
+        //     let parent_key = self.up_map.get(&key).copied();
+        //     let child_keys = self.down_map.neighbors(key);
 
-            Node {
-                parent_key,
-                value,
-                child_keys,
-            }
-        })
+        //     Node {
+        //         parent_key,
+        //         value,
+        //         child_keys,
+        //     }
+        // })
+        todo!()
     }
 
     /// Gets the [`NodeMut`] entry that corresponds to the given `key`.
@@ -290,16 +341,17 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// [`NodeMut`] entry.
     pub fn get_mut(&mut self, key: K) -> Option<NodeMut<'_, K, V>> {
-        self.values.get_mut(key).map(|value| {
-            let parent_key = self.up_map.get(&key).copied();
-            let child_keys = self.down_map.neighbors(key);
+        // self.values.get_mut(key).map(|value| {
+        //     let parent_key = self.up_map.get(&key).copied();
+        //     let child_keys = self.down_map.neighbors(key);
 
-            NodeMut {
-                parent_key,
-                value,
-                child_keys,
-            }
-        })
+        //     NodeMut {
+        //         parent_key,
+        //         value,
+        //         child_keys,
+        //     }
+        // })
+        todo!()
     }
 
     /// Returns a [`Vec`] of all the descendent keys of the given `key`
@@ -309,22 +361,23 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// descendent keys (including the given `key`).
     pub fn descendent_keys_inclusive(&self, key: K, size_hint: Option<usize>) -> Option<Vec<K>> {
-        self.contains(key).then(|| {
-            let size_hint = size_hint.unwrap_or_else(|| self.len());
+        // self.contains(key).then(|| {
+        //     let size_hint = size_hint.unwrap_or_else(|| self.len());
 
-            let mut to_visit_keys = Vec::with_capacity(size_hint);
-            let mut descendent_keys = Vec::with_capacity(size_hint);
+        //     let mut to_visit_keys = Vec::with_capacity(size_hint);
+        //     let mut descendent_keys = Vec::with_capacity(size_hint);
 
-            to_visit_keys.push(key);
+        //     to_visit_keys.push(key);
 
-            while let Some(to_visit_key) = to_visit_keys.pop() {
-                descendent_keys.push(to_visit_key);
-                let to_visit_child_keys = self.down_map.neighbors(to_visit_key);
-                to_visit_keys.extend(to_visit_child_keys);
-            }
+        //     while let Some(to_visit_key) = to_visit_keys.pop() {
+        //         descendent_keys.push(to_visit_key);
+        //         let to_visit_child_keys = self.down_map.neighbors(to_visit_key);
+        //         to_visit_keys.extend(to_visit_child_keys);
+        //     }
 
-            descendent_keys
-        })
+        //     descendent_keys
+        // })
+        todo!()
     }
 
     /// Gets the [`Relationship`] status between two keys.
@@ -333,62 +386,55 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// relationship between the two keys.
     pub fn get_relationship(&self, key1: K, key2: K) -> Option<Relationship<K>> {
-        let key1_exists = self.contains(key1);
-        let key2_exists = self.contains(key2);
-        let both_keys_exist = key1_exists && key2_exists;
+        // let key1_exists = self.contains(key1);
+        // let key2_exists = self.contains(key2);
+        // let both_keys_exist = key1_exists && key2_exists;
 
-        fn find_common_ancestor<K, V>(tree: &Tree<K, V>, key1: K, key2: K) -> Relationship<K>
-        where
-            K: Key,
-        {
-            if key1 == key2 {
-                Relationship::Same
-            } else {
-                let mut current_parent_key = tree.get(key1).unwrap().parent_key;
-                let mut path = BTreeSet::default();
+        // fn find_common_ancestor<K, V>(tree: &Tree<K, V>, key1: K, key2: K) -> Relationship<K>
+        // where
+        //     K: Key,
+        // {
+        //     if key1 == key2 {
+        //         Relationship::Same
+        //     }
+        //     else {
+        //         let mut current_parent_key = tree.get(key1).unwrap().parent_key;
+        //         let mut path = BTreeSet::default();
 
-                loop {
-                    match current_parent_key {
-                        Some(parent_key) if parent_key == key2 => {
-                            return Relationship::Ancestral {
-                                ancestor_key: key2,
-                                descendent_key: key1,
-                            }
-                        }
-                        Some(parent_key) => {
-                            path.insert(parent_key);
-                            current_parent_key = tree.get(parent_key).unwrap().parent_key;
-                        }
-                        None => break,
-                    }
-                }
+        //         loop {
+        //             match current_parent_key {
+        //                 Some(parent_key) if parent_key == key2 => return Relationship::Ancestral { ancestor_key: key2, descendent_key: key1 },
+        //                 Some(parent_key) => {
+        //                     path.insert(parent_key);
+        //                     current_parent_key = tree.get(parent_key).unwrap().parent_key;
+        //                 }
+        //                 None => break,
+        //             }
+        //         }
 
-                let mut current_parent_key = tree.get(key2).unwrap().parent_key;
+        //         let mut current_parent_key = tree.get(key2).unwrap().parent_key;
 
-                loop {
-                    match current_parent_key {
-                        Some(parent_key) if parent_key == key1 => {
-                            return Relationship::Ancestral {
-                                ancestor_key: key1,
-                                descendent_key: key2,
-                            }
-                        }
-                        Some(parent_key) => {
-                            if path.contains(&parent_key) {
-                                return Relationship::Siblings {
-                                    common_ancestor_key: parent_key,
-                                };
-                            } else {
-                                current_parent_key = tree.get(parent_key).unwrap().parent_key;
-                            }
-                        }
-                        None => unreachable!(),
-                    }
-                }
-            }
-        }
+        //         loop {
+        //             match current_parent_key {
+        //                 Some(parent_key) if parent_key == key1 => return Relationship::Ancestral { ancestor_key: key1, descendent_key: key2 },
+        //                 Some(parent_key) => {
+        //                     if path.contains(&parent_key) {
+        //                         return Relationship::Siblings {
+        //                             common_ancestor_key: parent_key,
+        //                         };
+        //                     }
+        //                     else {
+        //                         current_parent_key = tree.get(parent_key).unwrap().parent_key;
+        //                     }
+        //                 }
+        //                 None => unreachable!(),
+        //             }
+        //         }
+        //     }
+        // }
 
-        both_keys_exist.then(|| find_common_ancestor(self, key1, key2))
+        // both_keys_exist.then(|| find_common_ancestor(self, key1, key2))
+        todo!()
     }
 
     // Iterator methods:
@@ -399,7 +445,8 @@ where
     /// The order of iteration is arbitrary. It will not be guaranteed to be
     /// depth-first, breadth-first, in-order, etc.
     pub fn iter(&self) -> Iter<'_, K, V> {
-        self.values.iter()
+        // self.values.iter()
+        todo!()
     }
 
     /// Create a mutable iterator over the key-value pairs inside of this
@@ -412,7 +459,8 @@ where
     /// The order of iteration is arbitrary. It will not be guaranteed to be
     /// depth-first, breadth-first, in-order, etc.
     pub fn iter_mut(&mut self) -> IterMut<'_, K, V> {
-        self.values.iter_mut()
+        // self.values.iter_mut()
+        todo!()
     }
 }
 
@@ -424,23 +472,19 @@ where
     type Item = <Self::IntoIter as IntoIterator>::Item;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.values.into_iter()
+        // self.values.into_iter()
+        todo!()
     }
 }
 
-impl<K, V> Default for Tree<K, V>
-where
-    K: Key,
-{
-    fn default() -> Self {
-        Self {
-            values: SlotMap::default(),
-            up_map: BTreeMap::default(),
-            down_map: GraphMap::default(),
-            root_key: None,
-        }
-    }
-}
+// impl<K, V> Default for Tree<K, V>
+// where
+//     K: Key,
+// {
+//     fn default() -> Self {
+//         Self(None)
+//     }
+// }
 
 /// A container that wraps over an immutable reference to to the actual
 /// underlying value that is stored.
