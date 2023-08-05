@@ -7,6 +7,5 @@ repository = "https://github.com/raunakab/pettree"
 license-file = "LICENSE-BSD-3-CLAUSE"
 
 [dependencies]
-petgraph = "0.6.3"
 slotmap = "1.0.6"
-# hashbrown = "0.14.0"
+hashbrown = "0.14.0"
