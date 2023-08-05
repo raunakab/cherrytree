@@ -97,7 +97,7 @@ use slotmap::{
 #[derive(Default)]
 pub struct Tree<K, V>
 where
-    K: Key
+    K: Key,
 {
     root_key: Option<K>,
     values: SlotMap<K, V>,
@@ -109,6 +109,16 @@ impl<K, V> Tree<K, V>
 where
     K: Key,
 {
+    /// Create a new [`Tree`] instance with the specified `capacity` pre-allocated.
+    pub fn with_capacity(nodes_capacity: usize, edges_capacity: usize) -> Self {
+        Self {
+            root_key: None,
+            values: SlotMap::with_capacity_and_key(nodes_capacity),
+            up_map: BTreeMap::default(),
+            down_map: GraphMap::with_capacity(nodes_capacity, edges_capacity)
+        }
+    }
+
     // Check methods:
 
     /// Checks whether or not this instance of [`Tree`] has the given `key`
@@ -131,26 +141,11 @@ where
     /// some children values) inside of it, then this [`Tree`] instance is
     /// first fully cleared and replaced with the new, singular root value.
     pub fn insert_root(&mut self, value: V) -> K {
-        self.insert_root_with(|_| value)
-    }
-
-    /// Inserts a new root value into this [`Tree`] instance.
-    ///
-    /// The key where the value will be stored is passed into `f`. This is
-    /// useful to store values that contain their own key.
-    ///
-    /// If this [`Tree`] instance already contains a root value (and possibly
-    /// some children values) inside of it, then this [`Tree`] instance is
-    /// first fully cleared and replaced with the new, singular root value.
-    pub fn insert_root_with<F>(&mut self, f: F) -> K
-    where
-        F: FnOnce(K) -> V,
-    {
         if self.root_key.is_some() {
             self.clear();
         };
 
-        let root_key = self.values.insert_with_key(f);
+        let root_key = self.values.insert(value);
 
         self.down_map.add_node(root_key);
         self.root_key = Some(root_key);
@@ -164,23 +159,8 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// new key corresponding to this new child value.
     pub fn insert(&mut self, parent_key: K, value: V) -> Option<K> {
-        self.insert_with(parent_key, |_| value)
-    }
-
-    /// Inserts a new child value into this [`Tree`] instance.
-    ///
-    /// The key where the value will be stored is passed into `f`. This is
-    /// useful to store values that contain their own key.
-    ///
-    /// If this [`Tree`] instance does not contain the given `parent_key`, then
-    /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
-    /// new key corresponding to this new child value.
-    pub fn insert_with<F>(&mut self, parent_key: K, f: F) -> Option<K>
-    where
-        F: FnOnce(K) -> V,
-    {
         self.contains(parent_key).then(|| {
-            let key = self.values.insert_with_key(f);
+            let key = self.values.insert(value);
 
             self.up_map.insert(key, parent_key);
             self.down_map.add_edge(parent_key, key, ());
@@ -236,7 +216,11 @@ where
     pub fn rebase(&mut self, key: K, parent_key: K) -> bool {
         self.get_relationship(key, parent_key)
             .map_or(false, |relationship| {
-                if let Relationship::Ancestral { ancestor_key, descendent_key } = relationship {
+                if let Relationship::Ancestral {
+                    ancestor_key,
+                    descendent_key,
+                } = relationship
+                {
                     if parent_key == ancestor_key {
                         let current_parent_key = *self.up_map.get(&key).unwrap();
 
@@ -246,16 +230,13 @@ where
                             *self.up_map.get_mut(&key).unwrap() = parent_key;
                         }
                     }
-
                     else if parent_key == descendent_key {
                         todo!()
                     }
-
                     else {
                         unreachable!()
                     }
                 }
-
                 else if let Relationship::Siblings { .. } = relationship {
                     let current_parent_key = *self.up_map.get(&key).unwrap();
 
@@ -282,6 +263,14 @@ where
     /// Returns the number of elements in this [`Tree`] instance.
     pub fn len(&self) -> usize {
         self.values.len()
+    }
+
+    /// Returns the `root_key` of this [`Tree`] instance.
+    ///
+    /// Returns [`None`] if this [`Tree`] instance is empty. Otherwise, returns
+    /// [`Some(..)`] containing the `root_key`.
+    pub fn root_key(&self) -> Option<K> {
+        self.root_key
     }
 
     /// Returns an owned iterator over all the keys inside of this [`Tree`]
@@ -336,7 +325,7 @@ where
                 child_keys,
             }
         })
-     }
+    }
 
     /// Returns a [`Vec`] of all the descendent keys of the given `key`
     /// (including the given `key` itself).
@@ -386,7 +375,12 @@ where
 
                 loop {
                     match current_parent_key {
-                        Some(parent_key) if parent_key == key2 => return Relationship::Ancestral { ancestor_key: key2, descendent_key: key1 },
+                        Some(parent_key) if parent_key == key2 => {
+                            return Relationship::Ancestral {
+                                ancestor_key: key2,
+                                descendent_key: key1,
+                            }
+                        }
                         Some(parent_key) => {
                             path.insert(parent_key);
                             current_parent_key = tree.get(parent_key).unwrap().parent_key;
@@ -399,7 +393,12 @@ where
 
                 loop {
                     match current_parent_key {
-                        Some(parent_key) if parent_key == key1 => return Relationship::Ancestral { ancestor_key: key1, descendent_key: key2 },
+                        Some(parent_key) if parent_key == key1 => {
+                            return Relationship::Ancestral {
+                                ancestor_key: key1,
+                                descendent_key: key2,
+                            }
+                        }
                         Some(parent_key) => {
                             if path.contains(&parent_key) {
                                 return Relationship::Siblings {
