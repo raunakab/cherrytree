@@ -61,11 +61,6 @@
 
 use hashbrown::HashSet;
 use slotmap::{
-    basic::{
-        Iter,
-        Keys,
-        Values,
-    },
     Key,
     SlotMap,
 };
@@ -87,7 +82,8 @@ where
     K: Key,
 {
     root_key: Option<K>,
-    nodes: SlotMap<K, Node<K, V>>,
+    // inner_nodes: SlotMap<K, Node<K, V>>,
+    inner_nodes: SlotMap<K, InnerNode<K, V>>,
 }
 
 impl<K, V> Tree<K, V>
@@ -101,7 +97,7 @@ where
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             root_key: None,
-            nodes: SlotMap::with_capacity_and_key(capacity),
+            inner_nodes: SlotMap::with_capacity_and_key(capacity),
         }
     }
 
@@ -110,13 +106,13 @@ where
     /// Checks whether or not this [`Tree`] instance has the given `key` inside
     /// of it.
     pub fn contains(&self, key: K) -> bool {
-        self.nodes.contains_key(key)
+        self.inner_nodes.contains_key(key)
     }
 
     /// Checks whether or not this [`Tree`] instance is empty (i.e., has no
     /// values inside of it).
     pub fn is_empty(&self) -> bool {
-        self.nodes.is_empty()
+        self.inner_nodes.is_empty()
     }
 
     // Insertion/removal methods:
@@ -141,7 +137,7 @@ where
             self.clear();
         };
 
-        let root_key = self.nodes.insert(Node {
+        let root_key = self.inner_nodes.insert(InnerNode {
             parent_key: None,
             child_keys: HashSet::with_capacity(capacity),
             value,
@@ -167,8 +163,8 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// new key corresponding to this new child value.
     pub fn insert_with_capacity(&mut self, parent_key: K, value: V, capacity: usize) -> Option<K> {
-        self.nodes.contains_key(parent_key).then(|| {
-            self.nodes.insert(Node {
+        self.inner_nodes.contains_key(parent_key).then(|| {
+            self.inner_nodes.insert(InnerNode {
                 parent_key: Some(parent_key),
                 child_keys: HashSet::with_capacity(capacity),
                 value,
@@ -190,7 +186,7 @@ where
     pub fn remove(&mut self, key: K, size_hint: Option<usize>) -> Option<V> {
         self.root_key.and_then(|root_key| {
             if key == root_key {
-                let node = self.nodes.remove(key).unwrap();
+                let node = self.inner_nodes.remove(key).unwrap();
                 self.clear();
                 Some(node.value)
             }
@@ -200,12 +196,12 @@ where
                         .into_iter()
                         .skip(1)
                         .for_each(|descendent_key| {
-                            self.nodes.remove(descendent_key).unwrap();
+                            self.inner_nodes.remove(descendent_key).unwrap();
                         });
 
-                    let node = self.nodes.remove(key).unwrap();
+                    let node = self.inner_nodes.remove(key).unwrap();
                     let parent_key = node.parent_key.unwrap();
-                    self.nodes
+                    self.inner_nodes
                         .get_mut(parent_key)
                         .unwrap()
                         .child_keys
@@ -231,16 +227,16 @@ where
                 } = relationship
                 {
                     if parent_key == ancestor_key {
-                        let node = self.nodes.get_mut(key).unwrap();
+                        let node = self.inner_nodes.get_mut(key).unwrap();
                         let current_parent_key = node.parent_key.unwrap();
                         if current_parent_key != parent_key {
                             node.parent_key = Some(parent_key);
-                            self.nodes
+                            self.inner_nodes
                                 .get_mut(current_parent_key)
                                 .unwrap()
                                 .child_keys
                                 .remove(&key);
-                            self.nodes
+                            self.inner_nodes
                                 .get_mut(parent_key)
                                 .unwrap()
                                 .child_keys
@@ -255,16 +251,16 @@ where
                     }
                 }
                 else if let Relationship::Siblings { .. } = relationship {
-                    let node = self.nodes.get_mut(key).unwrap();
+                    let node = self.inner_nodes.get_mut(key).unwrap();
                     let current_parent_key = node.parent_key.unwrap();
 
                     node.parent_key = Some(parent_key);
-                    self.nodes
+                    self.inner_nodes
                         .get_mut(current_parent_key)
                         .unwrap()
                         .child_keys
                         .remove(&key);
-                    self.nodes
+                    self.inner_nodes
                         .get_mut(parent_key)
                         .unwrap()
                         .child_keys
@@ -279,14 +275,14 @@ where
     /// memory for reuse.
     pub fn clear(&mut self) {
         self.root_key = None;
-        self.nodes.clear();
+        self.inner_nodes.clear();
     }
 
     // Getter/setter methods:
 
     /// Returns the number of elements in this [`Tree`] instance.
     pub fn len(&self) -> usize {
-        self.nodes.len()
+        self.inner_nodes.len()
     }
 
     /// Returns the `root_key` of this [`Tree`] instance.
@@ -303,8 +299,12 @@ where
     /// If the given `key` does not exist in this [`Tree`] instance, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// [`Node`] entry.
-    pub fn get(&self, key: K) -> Option<&Node<K, V>> {
-        self.nodes.get(key)
+    pub fn get(&self, key: K) -> Option<Node<'_, K, V>> {
+        self.inner_nodes.get(key).map(|inner_node| Node {
+            parent_key: inner_node.parent_key,
+            child_keys: &inner_node.child_keys,
+            value: &inner_node.value,
+        })
     }
 
     /// Gets an owned [`Node`] which contains a mutable reference to the
@@ -313,11 +313,11 @@ where
     /// If the given `key` does not exist in this [`Tree`] instance, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// [`Node`] entry.
-    pub fn get_mut(&mut self, key: K) -> Option<Node<K, &mut V>> {
-        self.nodes.get_mut(key).map(|node| Node {
-            parent_key: node.parent_key,
-            child_keys: node.child_keys.clone(),
-            value: &mut node.value,
+    pub fn get_mut(&mut self, key: K) -> Option<NodeMut<'_, K, V>> {
+        self.inner_nodes.get_mut(key).map(|inner_node| NodeMut {
+            parent_key: inner_node.parent_key,
+            child_keys: &inner_node.child_keys,
+            value: &mut inner_node.value,
         })
     }
 
@@ -328,10 +328,10 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// descendent keys (including the given `key`).
     pub fn descendent_keys(&self, key: K, size_hint: Option<usize>) -> Option<Vec<K>> {
-        self.nodes.contains_key(key).then(|| {
-            let size_hint = size_hint.unwrap_or_else(|| self.nodes.len());
+        self.inner_nodes.contains_key(key).then(|| {
+            let size_hint = size_hint.unwrap_or_else(|| self.inner_nodes.len());
 
-            let mut to_visit_keys = self.nodes.get(key).unwrap().child_keys.iter().fold(
+            let mut to_visit_keys = self.inner_nodes.get(key).unwrap().child_keys.iter().fold(
                 Vec::with_capacity(size_hint),
                 |mut vec, &child_key| {
                     vec.push(child_key);
@@ -342,7 +342,7 @@ where
 
             while let Some(to_visit_key) = to_visit_keys.pop() {
                 descendent_keys.push(to_visit_key);
-                let to_visit_child_keys = &self.nodes.get(to_visit_key).unwrap().child_keys;
+                let to_visit_child_keys = &self.inner_nodes.get(to_visit_key).unwrap().child_keys;
                 to_visit_keys.extend(to_visit_child_keys);
             }
 
@@ -365,7 +365,7 @@ where
             }
             else {
                 let mut current_parent_key = tree.get(key1).unwrap().parent_key;
-                let length = tree.nodes.len();
+                let length = tree.inner_nodes.len();
                 let mut path = HashSet::with_capacity(length);
 
                 loop {
@@ -410,8 +410,8 @@ where
             }
         }
 
-        let key1_exists = self.nodes.contains_key(key1);
-        let key2_exists = self.nodes.contains_key(key2);
+        let key1_exists = self.inner_nodes.contains_key(key1);
+        let key2_exists = self.inner_nodes.contains_key(key2);
         let both_keys_exist = key1_exists && key2_exists;
 
         both_keys_exist.then(|| get_relationship(self, key1, key2))
@@ -421,23 +421,27 @@ where
 
     /// Returns an owned iterator over all the keys inside of this [`Tree`]
     /// instance.
-    pub fn keys(&self) -> Keys<'_, K, Node<K, V>> {
-        self.nodes.keys()
+    pub fn keys(&self) -> impl '_ + Iterator<Item = K> {
+        self.inner_nodes.keys()
     }
 
     /// Returns an immutable iterator over all the [`Node`]s inside of this
     /// [`Tree`] instance.
-    pub fn nodes(&self) -> Values<'_, K, Node<K, V>> {
-        self.nodes.values()
+    pub fn nodes(&self) -> impl Iterator<Item = Node<'_, K, V>> {
+        self.inner_nodes.values().map(|inner_node| Node {
+            parent_key: inner_node.parent_key,
+            child_keys: &inner_node.child_keys,
+            value: &inner_node.value,
+        })
     }
 
     /// Returns a mutable iterator over all the [`Node`]s inside of this
     /// [`Tree`] instance.
-    pub fn nodes_mut(&mut self) -> impl Iterator<Item = Node<K, &mut V>> {
-        self.nodes.values_mut().map(|node| Node {
-            parent_key: node.parent_key,
-            child_keys: node.child_keys.clone(),
-            value: &mut node.value,
+    pub fn nodes_mut(&mut self) -> impl Iterator<Item = NodeMut<'_, K, V>> {
+        self.inner_nodes.values_mut().map(|inner_node| NodeMut {
+            parent_key: inner_node.parent_key,
+            child_keys: &inner_node.child_keys,
+            value: &mut inner_node.value,
         })
     }
 
@@ -446,8 +450,17 @@ where
     ///
     /// The order of iteration is arbitrary. It will not be guaranteed to be
     /// depth-first, breadth-first, in-order, etc.
-    pub fn iter(&self) -> Iter<'_, K, Node<K, V>> {
-        self.nodes.iter()
+    pub fn iter(&self) -> impl Iterator<Item = (K, Node<'_, K, V>)> {
+        self.inner_nodes.iter().map(|(key, inner_node)| {
+            (
+                key,
+                Node {
+                    parent_key: inner_node.parent_key,
+                    child_keys: &inner_node.child_keys,
+                    value: &inner_node.value,
+                },
+            )
+        })
     }
 
     /// Create a mutable iterator over the key-value pairs inside of this
@@ -459,14 +472,14 @@ where
     ///
     /// The order of iteration is arbitrary. It will not be guaranteed to be
     /// depth-first, breadth-first, in-order, etc.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (K, Node<K, &mut V>)> {
-        self.nodes.iter_mut().map(|(key, node)| {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (K, NodeMut<'_, K, V>)> {
+        self.inner_nodes.iter_mut().map(|(key, inner_node)| {
             (
                 key,
-                Node {
-                    parent_key: node.parent_key,
-                    child_keys: node.child_keys.clone(),
-                    value: &mut node.value,
+                NodeMut {
+                    parent_key: inner_node.parent_key,
+                    child_keys: &inner_node.child_keys,
+                    value: &mut inner_node.value,
                 },
             )
         })
@@ -480,26 +493,57 @@ where
     fn default() -> Self {
         Self {
             root_key: None,
-            nodes: SlotMap::default(),
+            inner_nodes: SlotMap::default(),
         }
     }
 }
 
-/// A container over the underlying value inside of this [`Tree`] instance.
+/// An internal container over the underlying value inside of this [`Tree`]
+/// instance.
 ///
 /// It contains the actual underlying value, as well as its `parent_key` and
 /// `child_keys`.
-pub struct Node<K, V> {
+struct InnerNode<K, V> {
+    /// The parent key of this value.
+    ///
+    /// Is [`None`] iff this value is the root value.
+    parent_key: Option<K>,
+
+    /// The children keys of this value.
+    child_keys: HashSet<K>,
+
+    /// The actual underlying value that is stored.
+    value: V,
+}
+
+/// An immutable container over the underlying value inside of this [`Tree`]
+/// instance as well as some other relevant information.
+pub struct Node<'a, K, V> {
     /// The parent key of this value.
     ///
     /// Is [`None`] iff this value is the root value.
     pub parent_key: Option<K>,
 
-    /// The children keys of this value.
-    pub child_keys: HashSet<K>,
+    /// An immutable reference to the children keys of this value.
+    pub child_keys: &'a HashSet<K>,
 
-    /// The actual underlying value that is stored.
-    pub value: V,
+    /// An immutable reference to the underlying value that is stored.
+    pub value: &'a V,
+}
+
+/// A mutable container over the underlying value inside of this [`Tree`]
+/// instance as well as some other relevant information.
+pub struct NodeMut<'a, K, V> {
+    /// The parent key of this value.
+    ///
+    /// Is [`None`] iff this value is the root value.
+    pub parent_key: Option<K>,
+
+    /// An immutable reference to the children keys of this value.
+    pub child_keys: &'a HashSet<K>,
+
+    /// A mutable reference to the underlying value that is stored.
+    pub value: &'a mut V,
 }
 
 /// A description of the relationship between two keys in a [`Tree`] instance.
