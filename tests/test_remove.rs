@@ -9,7 +9,7 @@ fn test_remove_from_empty() {
 
     let key = DefaultKey::default();
 
-    assert!(!tree.remove(key, None));
+    assert!(tree.remove(key, None).is_none());
     assert!(tree.is_empty());
 }
 
@@ -25,7 +25,7 @@ fn test_remove_root() {
         assert!(!tree.is_empty());
 
         let root_key = tree.root_key().unwrap();
-        assert!(tree.remove(root_key, None));
+        assert!(tree.remove(root_key, None).is_some());
 
         assert!(tree.is_empty());
     }

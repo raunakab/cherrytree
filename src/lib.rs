@@ -75,36 +75,34 @@ where
         })
     }
 
-    pub fn remove(&mut self, key: K, size_hint: Option<usize>) -> bool {
-        self.root_key
-            .and_then(|root_key| {
-                if key == root_key {
+    pub fn remove(&mut self, key: K, size_hint: Option<usize>) -> Option<V> {
+        self.root_key.and_then(|root_key| {
+            if key == root_key {
+                let node = self.nodes.remove(key).unwrap();
+                self.clear();
+                Some(node.value)
+            }
+            else {
+                self.descendent_keys(key, size_hint).map(|descendent_keys| {
+                    descendent_keys
+                        .into_iter()
+                        .skip(1)
+                        .for_each(|descendent_key| {
+                            self.nodes.remove(descendent_key).unwrap();
+                        });
+
                     let node = self.nodes.remove(key).unwrap();
-                    self.clear();
-                    Some(node.value)
-                }
-                else {
-                    self.descendent_keys(key, size_hint).map(|descendent_keys| {
-                        descendent_keys
-                            .into_iter()
-                            .skip(1)
-                            .for_each(|descendent_key| {
-                                self.nodes.remove(descendent_key).unwrap();
-                            });
+                    let parent_key = node.parent_key.unwrap();
+                    self.nodes
+                        .get_mut(parent_key)
+                        .unwrap()
+                        .child_keys
+                        .remove(&key);
 
-                        let node = self.nodes.remove(key).unwrap();
-                        let parent_key = node.parent_key.unwrap();
-                        self.nodes
-                            .get_mut(parent_key)
-                            .unwrap()
-                            .child_keys
-                            .remove(&key);
-
-                        node.value
-                    })
-                }
-            })
-            .is_some()
+                    node.value
+                })
+            }
+        })
     }
 
     pub fn rebase(&mut self, key: K, parent_key: K) -> bool {
