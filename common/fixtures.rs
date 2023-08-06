@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 //! Test fixtures that can be called in tests to provide easy, already
 //! configured [`Tree`]s of specific shapes.
 
@@ -26,6 +24,19 @@ pub fn all() -> Vec<Tree<DefaultKey, usize>> {
 pub fn all_non_empty() -> Vec<Tree<DefaultKey, usize>> {
     vec![
         single_root_tree(),
+        depth_2_tree(),
+        linear_depth_4_tree(),
+        small(),
+        medium(),
+        large(),
+    ]
+}
+
+/// Returns all the below fixtures in a [`Vec`] *except* for trees with depth of less than 2.
+///
+/// This can be useful for tests that want to test functionality on all different types of trees containing children.
+pub fn all_depth_2_or_greater() -> Vec<Tree<DefaultKey, usize>> {
+    vec![
         depth_2_tree(),
         linear_depth_4_tree(),
         small(),

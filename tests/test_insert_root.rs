@@ -1,9 +1,9 @@
-#[path = "../fixtures/mod.rs"]
-mod fixtures;
+#[path = "../common/mod.rs"]
+mod common;
 
 #[test]
 fn test_insert_root() {
-    let trees = fixtures::all();
+    let trees = common::fixtures::all();
 
     for mut tree in trees {
         let root_key = tree.insert_root(0);

@@ -1,12 +1,11 @@
-use pettree::Tree;
-use slotmap::DefaultKey;
+#[path = "../common/mod.rs"]
+mod common;
 
-#[path = "../fixtures/mod.rs"]
-mod fixtures;
+use slotmap::DefaultKey;
 
 #[test]
 fn test_insert_with_random_parent_key() {
-    let trees = fixtures::all();
+    let trees = common::fixtures::all();
 
     for mut tree in trees {
         let key = DefaultKey::default();
@@ -17,24 +16,12 @@ fn test_insert_with_random_parent_key() {
 
 #[test]
 fn test_insert_many_children() {
-    let trees = fixtures::all_non_empty();
-
-    fn get_right_most_key(tree: &Tree<DefaultKey, usize>) -> DefaultKey {
-        let mut key = tree.root_key().unwrap();
-
-        loop {
-            let selected_child_key = tree.get(key).unwrap().child_keys.iter().next();
-            match selected_child_key {
-                Some(&selected_child_key) => key = selected_child_key,
-                None => break key,
-            }
-        }
-    }
+    let trees = common::fixtures::all_non_empty();
 
     const NUMBER_OF_CHILDREN_TO_INSERT: usize = 100;
 
     for mut tree in trees {
-        let key = get_right_most_key(&tree);
+        let key = common::utils::get_some_leaf_key(&tree);
 
         assert!(tree.contains(key));
         assert_eq!(tree.get(key).unwrap().child_keys.len(), 0);

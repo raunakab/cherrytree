@@ -1,11 +1,11 @@
-#[path = "../fixtures/mod.rs"]
-mod fixtures;
+#[path = "../common/mod.rs"]
+mod common;
 
 use slotmap::DefaultKey;
 
 #[test]
 fn test_remove_random_key() {
-    let trees = fixtures::all();
+    let trees = common::fixtures::all();
 
     let key = DefaultKey::default();
 
@@ -17,7 +17,7 @@ fn test_remove_random_key() {
 
 #[test]
 fn test_remove_root() {
-    let trees = fixtures::all_non_empty();
+    let trees = common::fixtures::all_non_empty();
 
     for mut tree in trees {
         assert!(!tree.is_empty());
@@ -30,6 +30,36 @@ fn test_remove_root() {
 }
 
 #[test]
-fn test_remove_child() {
+fn test_remove_leaf() {
+    let trees = common::fixtures::all_depth_2_or_greater();
+
+    for mut tree in trees {
+        let key = common::utils::get_some_leaf_key(&tree);
+        let parent_key = tree.get(key).unwrap().parent_key.unwrap();
+
+        let length = tree.len();
+        let parent_child_keys = tree.get(parent_key).unwrap().child_keys;
+        let parent_child_keys_length = parent_child_keys.len();
+        assert!(tree.contains(parent_key));
+        assert!(parent_child_keys.contains(&key));
+
+        tree.remove(key, Some(0)).unwrap();
+
+        let new_length = tree.len();
+        let parent_child_keys = tree.get(parent_key).unwrap().child_keys;
+        let new_parent_child_keys_length = parent_child_keys.len();
+        assert!(!tree.contains(key));
+        assert!(!parent_child_keys.contains(&key));
+
+        assert_eq!(new_parent_child_keys_length, parent_child_keys_length - 1);
+        assert_eq!(new_length, length - 1);
+
+        assert!(tree.contains(parent_key));
+        assert!(!tree.contains(key));
+    }
+}
+
+#[test]
+fn test_remove_child_non_leaf() {
     todo!()
 }
