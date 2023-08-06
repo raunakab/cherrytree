@@ -197,24 +197,25 @@ where
                 Some(node.value)
             }
             else {
-                self.descendent_keys(key, size_hint).map(|descendent_keys| {
-                    descendent_keys
-                        .into_iter()
-                        .skip(1)
-                        .for_each(|descendent_key| {
-                            self.inner_nodes.remove(descendent_key).unwrap();
-                        });
+                self.get_descendent_keys(key, size_hint)
+                    .map(|descendent_keys| {
+                        descendent_keys
+                            .into_iter()
+                            .skip(1)
+                            .for_each(|descendent_key| {
+                                self.inner_nodes.remove(descendent_key).unwrap();
+                            });
 
-                    let node = self.inner_nodes.remove(key).unwrap();
-                    let parent_key = node.parent_key.unwrap();
-                    self.inner_nodes
-                        .get_mut(parent_key)
-                        .unwrap()
-                        .child_keys
-                        .remove(&key);
+                        let node = self.inner_nodes.remove(key).unwrap();
+                        let parent_key = node.parent_key.unwrap();
+                        self.inner_nodes
+                            .get_mut(parent_key)
+                            .unwrap()
+                            .child_keys
+                            .remove(&key);
 
-                    node.value
-                })
+                        node.value
+                    })
             }
         })
     }
@@ -333,7 +334,7 @@ where
     /// If the given `key` does not exist in this [`Tree`] instance, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// descendent keys (including the given `key`).
-    pub fn descendent_keys(&self, key: K, size_hint: Option<usize>) -> Option<Vec<K>> {
+    pub fn get_descendent_keys(&self, key: K, size_hint: Option<usize>) -> Option<Vec<K>> {
         self.inner_nodes.contains_key(key).then(|| {
             let size_hint = size_hint.unwrap_or_else(|| self.inner_nodes.len());
 
