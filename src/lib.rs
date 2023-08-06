@@ -49,13 +49,13 @@
 //!
 //! // Get an immutable reference to one of the children's value:
 //! let child_node_1 = tree.get(child_key_1).unwrap();
-//! assert_eq!(child_node_1.value, 1);
+//! assert_eq!(*child_node_1.value, 1);
 //!
 //! // Or get a mutable reference to one of the children's value:
 //! let child_node_2 = tree.get_mut(child_key_2).unwrap();
 //! *child_node_2.value = 100;
 //! let child_node_2 = tree.get(child_key_2).unwrap();
-//! assert_eq!(child_node_2.value, 100);
+//! assert_eq!(*child_node_2.value, 100);
 //! # }
 //! ```
 
