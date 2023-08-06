@@ -4,13 +4,21 @@ mod fixtures;
 use slotmap::DefaultKey;
 
 #[test]
-fn test_remove_from_empty() {
-    let mut tree = fixtures::empty_tree();
+fn test_remove_random_key() {
+    let trees = vec![
+        fixtures::empty_tree(),
+        fixtures::single_root_tree(),
+        fixtures::depth_2_tree(),
+        fixtures::linear_depth_4_tree(),
+
+    ];
 
     let key = DefaultKey::default();
 
-    assert!(tree.remove(key, None).is_none());
-    assert!(tree.is_empty());
+    for mut tree in trees {
+        assert!(!tree.contains(key));
+        assert!(tree.remove(key, None).is_none());
+    }
 }
 
 #[test]
@@ -29,4 +37,9 @@ fn test_remove_root() {
 
         assert!(tree.is_empty());
     }
+}
+
+#[test]
+fn test_remove_child() {
+    todo!()
 }
