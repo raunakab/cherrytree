@@ -5,12 +5,7 @@ use slotmap::DefaultKey;
 
 #[test]
 fn test_remove_random_key() {
-    let trees = vec![
-        fixtures::empty_tree(),
-        fixtures::single_root_tree(),
-        fixtures::depth_2_tree(),
-        fixtures::linear_depth_4_tree(),
-    ];
+    let trees = fixtures::all();
 
     let key = DefaultKey::default();
 
@@ -22,11 +17,7 @@ fn test_remove_random_key() {
 
 #[test]
 fn test_remove_root() {
-    let trees = vec![
-        fixtures::single_root_tree(),
-        fixtures::depth_2_tree(),
-        fixtures::linear_depth_4_tree(),
-    ];
+    let trees = fixtures::all_non_empty();
 
     for mut tree in trees {
         assert!(!tree.is_empty());

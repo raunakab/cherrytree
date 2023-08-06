@@ -6,12 +6,7 @@ mod fixtures;
 
 #[test]
 fn test_insert_with_random_parent_key() {
-    let trees = vec![
-        fixtures::empty_tree(),
-        fixtures::single_root_tree(),
-        fixtures::depth_2_tree(),
-        fixtures::linear_depth_4_tree(),
-    ];
+    let trees = fixtures::all();
 
     for mut tree in trees {
         let key = DefaultKey::default();
@@ -22,11 +17,7 @@ fn test_insert_with_random_parent_key() {
 
 #[test]
 fn test_insert_many_children() {
-    let trees = vec![
-        fixtures::single_root_tree(),
-        fixtures::depth_2_tree(),
-        fixtures::linear_depth_4_tree(),
-    ];
+    let trees = fixtures::all_non_empty();
 
     fn get_right_most_key(tree: &Tree<DefaultKey, usize>) -> DefaultKey {
         let mut key = tree.root_key().unwrap();

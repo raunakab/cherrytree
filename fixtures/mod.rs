@@ -6,6 +6,24 @@
 use pettree::Tree;
 use slotmap::DefaultKey;
 
+/// Returns all the below fixtures in a [`Vec`].
+pub fn all() -> Vec<Tree<DefaultKey, usize>> {
+    vec![
+        empty_tree(),
+        single_root_tree(),
+        depth_2_tree(),
+        linear_depth_4_tree(),
+    ]
+}
+
+/// Returns all the below fixtures in a [`Vec`] *except* for the empty tree.
+///
+/// This can be useful for tests that want to test functionality on all
+/// different types of *non-empty* trees.
+pub fn all_non_empty() -> Vec<Tree<DefaultKey, usize>> {
+    vec![single_root_tree(), depth_2_tree(), linear_depth_4_tree()]
+}
+
 /// Returns an empty [`Tree`] with no elements in it (not even a root
 /// [`pettree::Node`]).
 pub fn empty_tree() -> Tree<DefaultKey, usize> {
