@@ -10,7 +10,6 @@ fn test_remove_random_key() {
         fixtures::single_root_tree(),
         fixtures::depth_2_tree(),
         fixtures::linear_depth_4_tree(),
-
     ];
 
     let key = DefaultKey::default();

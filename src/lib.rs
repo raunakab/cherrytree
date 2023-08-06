@@ -164,11 +164,17 @@ where
     /// new key corresponding to this new child value.
     pub fn insert_with_capacity(&mut self, parent_key: K, value: V, capacity: usize) -> Option<K> {
         self.inner_nodes.contains_key(parent_key).then(|| {
-            self.inner_nodes.insert(InnerNode {
+            let key = self.inner_nodes.insert(InnerNode {
                 parent_key: Some(parent_key),
                 child_keys: HashSet::with_capacity(capacity),
                 value,
-            })
+            });
+            self.inner_nodes
+                .get_mut(parent_key)
+                .unwrap()
+                .child_keys
+                .insert(key);
+            key
         })
     }
 
