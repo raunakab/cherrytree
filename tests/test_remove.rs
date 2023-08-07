@@ -71,28 +71,40 @@ fn test_remove_leaf() {
 
 #[test]
 fn test_remove_child_non_leaf() {
-    let trees = common::fixtures::all_depth_2_or_greater();
+    let trees = common::fixtures::all_depth_3_or_greater();
 
     for mut tree in trees {
         let key = common::utils::get_parent_of_some_leaf_key(&tree);
-
         let node = tree.get(key).unwrap();
         let child_keys = node.child_keys.clone();
+
+        let parent_key = node.parent_key.unwrap();
+        let parent_node = tree.get(parent_key).unwrap();
+        let parent_child_keys = parent_node.child_keys.clone();
+
         let length = tree.len();
 
         assert!(tree.contains(key));
+        assert!(tree.contains(parent_key));
         child_keys
             .iter()
             .for_each(|&child_key| assert!(tree.contains(child_key)));
+        assert!(parent_child_keys.contains(&key));
 
         tree.remove(key, None).unwrap();
+
+        let parent_node = tree.get(parent_key).unwrap();
+        let parent_child_keys = parent_node.child_keys.clone();
 
         let new_length = tree.len();
 
         assert!(!tree.contains(key));
+        assert!(tree.contains(parent_key));
         child_keys
             .iter()
             .for_each(|&child_key| assert!(!tree.contains(child_key)));
+        assert!(!parent_child_keys.contains(&key));
+
         assert_eq!(new_length, length - 1 - child_keys.len());
     }
 }

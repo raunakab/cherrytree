@@ -47,6 +47,15 @@ pub fn all_depth_2_or_greater() -> Vec<Tree<DefaultKey, usize>> {
     ]
 }
 
+/// Returns all the below fixtures in a [`Vec`] *except* for trees with depth of
+/// less than 3.
+///
+/// This can be useful for tests that want to test functionality on all
+/// different types of trees containing children.
+pub fn all_depth_3_or_greater() -> Vec<Tree<DefaultKey, usize>> {
+    vec![linear_depth_4_tree(), medium(), large()]
+}
+
 /// Returns an empty [`Tree`] with no elements in it (not even a root
 /// [`pettree::Node`]).
 pub fn empty_tree() -> Tree<DefaultKey, usize> {
