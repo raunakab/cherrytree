@@ -199,12 +199,9 @@ where
             else {
                 self.get_descendent_keys(key, size_hint)
                     .map(|descendent_keys| {
-                        descendent_keys
-                            .into_iter()
-                            .skip(1)
-                            .for_each(|descendent_key| {
-                                self.inner_nodes.remove(descendent_key).unwrap();
-                            });
+                        descendent_keys.into_iter().for_each(|descendent_key| {
+                            self.inner_nodes.remove(descendent_key).unwrap();
+                        });
 
                         let node = self.inner_nodes.remove(key).unwrap();
                         let parent_key = node.parent_key.unwrap();
