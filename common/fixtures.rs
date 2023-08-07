@@ -32,9 +32,11 @@ pub fn all_non_empty() -> Vec<Tree<DefaultKey, usize>> {
     ]
 }
 
-/// Returns all the below fixtures in a [`Vec`] *except* for trees with depth of less than 2.
+/// Returns all the below fixtures in a [`Vec`] *except* for trees with depth of
+/// less than 2.
 ///
-/// This can be useful for tests that want to test functionality on all different types of trees containing children.
+/// This can be useful for tests that want to test functionality on all
+/// different types of trees containing children.
 pub fn all_depth_2_or_greater() -> Vec<Tree<DefaultKey, usize>> {
     vec![
         depth_2_tree(),
@@ -116,7 +118,8 @@ pub fn linear_depth_4_tree() -> Tree<DefaultKey, usize> {
 /// - all parents having 2 children
 /// - each node having a value of 0
 ///
-/// Using the geometric sum formula, the number of nodes in this [`Tree`] will be:
+/// Using the geometric sum formula, the number of nodes in this [`Tree`] will
+/// be:
 ///
 /// ```md
 /// (2 ^ {2 + 1} - 1) / (2 - 1) = 7 / 1 = 7
@@ -130,7 +133,8 @@ pub fn small() -> Tree<DefaultKey, usize> {
 /// - all parents having 3 children
 /// - each node having a value of 0
 ///
-/// Using the geometric sum formula, the number of nodes in this [`Tree`] will be:
+/// Using the geometric sum formula, the number of nodes in this [`Tree`] will
+/// be:
 ///
 /// ```md
 /// (3 ^ {3 + 1} - 1) / (3 - 1) = 40
@@ -144,7 +148,8 @@ pub fn medium() -> Tree<DefaultKey, usize> {
 /// - all parents having 4 children
 /// - each node having a value of 0
 ///
-/// Using the geometric sum formula, the number of nodes in this [`Tree`] will be:
+/// Using the geometric sum formula, the number of nodes in this [`Tree`] will
+/// be:
 ///
 /// ```md
 /// (4 ^ {4 + 1} - 1) / (4 - 1) = 1023 / 3 = 341
