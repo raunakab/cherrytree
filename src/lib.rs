@@ -82,7 +82,6 @@ where
     K: Key,
 {
     root_key: Option<K>,
-    // inner_nodes: SlotMap<K, Node<K, V>>,
     inner_nodes: SlotMap<K, InnerNode<K, V>>,
 }
 
@@ -332,10 +331,10 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// descendent keys (including the given `key`).
     pub fn get_descendent_keys(&self, key: K, size_hint: Option<usize>) -> Option<Vec<K>> {
-        self.inner_nodes.contains_key(key).then(|| {
+        self.inner_nodes.get(key).map(|node| {
             let size_hint = size_hint.unwrap_or_else(|| self.inner_nodes.len());
 
-            let mut to_visit_keys = self.inner_nodes.get(key).unwrap().child_keys.iter().fold(
+            let mut to_visit_keys = node.child_keys.iter().fold(
                 Vec::with_capacity(size_hint),
                 |mut vec, &child_key| {
                     vec.push(child_key);
