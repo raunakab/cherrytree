@@ -140,6 +140,7 @@ where
             parent_key: None,
             child_keys: HashSet::with_capacity(capacity),
             value,
+            depth: 0,
         });
         self.root_key = Some(root_key);
 
@@ -163,16 +164,28 @@ where
     /// new key corresponding to this new child value.
     pub fn insert_with_capacity(&mut self, parent_key: K, value: V, capacity: usize) -> Option<K> {
         self.inner_nodes.contains_key(parent_key).then(|| {
+            // # Note:
+            // The reason why we `get(parent_key)` once and then do a `get_mut(parent_key)`
+            // a second time is because of mutable borrowship issues.
+            //
+            // Potential source for optimization at a future point (although this would
+            // likely require `unsafe`).
+
+            let parent_depth = self.inner_nodes.get(parent_key).unwrap().depth;
+
             let key = self.inner_nodes.insert(InnerNode {
                 parent_key: Some(parent_key),
                 child_keys: HashSet::with_capacity(capacity),
                 value,
+                depth: parent_depth + 1,
             });
+
             self.inner_nodes
                 .get_mut(parent_key)
                 .unwrap()
                 .child_keys
                 .insert(key);
+
             key
         })
     }
@@ -296,8 +309,7 @@ where
         self.root_key
     }
 
-    /// Gets a reference to the [`Node`] entry that corresponds to the given
-    /// `key`.
+    /// Returns a [`Node`] which corresponds to the given `key` inside of this [`Tree`] instance.
     ///
     /// If the given `key` does not exist in this [`Tree`] instance, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
@@ -307,11 +319,11 @@ where
             parent_key: inner_node.parent_key,
             child_keys: &inner_node.child_keys,
             value: &inner_node.value,
+            depth: inner_node.depth,
         })
     }
 
-    /// Gets an owned [`Node`] which contains a mutable reference to the
-    /// underlying value that corresponds to the given `key`.
+    /// Returns a [`NodeMut`] which corresponds to the given `key` inside of this [`Tree`] instance.
     ///
     /// If the given `key` does not exist in this [`Tree`] instance, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
@@ -321,6 +333,7 @@ where
             parent_key: inner_node.parent_key,
             child_keys: &inner_node.child_keys,
             value: &mut inner_node.value,
+            depth: inner_node.depth,
         })
     }
 
@@ -435,6 +448,7 @@ where
             parent_key: inner_node.parent_key,
             child_keys: &inner_node.child_keys,
             value: &inner_node.value,
+            depth: inner_node.depth,
         })
     }
 
@@ -445,6 +459,7 @@ where
             parent_key: inner_node.parent_key,
             child_keys: &inner_node.child_keys,
             value: &mut inner_node.value,
+            depth: inner_node.depth,
         })
     }
 
@@ -461,6 +476,7 @@ where
                     parent_key: inner_node.parent_key,
                     child_keys: &inner_node.child_keys,
                     value: &inner_node.value,
+                    depth: inner_node.depth,
                 },
             )
         })
@@ -483,6 +499,7 @@ where
                     parent_key: inner_node.parent_key,
                     child_keys: &inner_node.child_keys,
                     value: &mut inner_node.value,
+                    depth: inner_node.depth,
                 },
             )
         })
@@ -517,6 +534,11 @@ struct InnerNode<K, V> {
 
     /// The actual underlying value that is stored.
     value: V,
+
+    /// The depth that this [`InnerNode`] sits at.
+    ///
+    /// Here, depth starts at `0` which represents the root.
+    depth: usize,
 }
 
 /// An immutable container over the underlying value inside of this [`Tree`]
@@ -532,6 +554,11 @@ pub struct Node<'a, K, V> {
 
     /// An immutable reference to the underlying value that is stored.
     pub value: &'a V,
+
+    /// The depth that this [`Node`] sits at.
+    ///
+    /// Here, depth starts at `0` which represents the root.
+    pub depth: usize,
 }
 
 /// A mutable container over the underlying value inside of this [`Tree`]
@@ -547,6 +574,11 @@ pub struct NodeMut<'a, K, V> {
 
     /// A mutable reference to the underlying value that is stored.
     pub value: &'a mut V,
+
+    /// The depth that this [`NodeMut`] sits at.
+    ///
+    /// Here, depth starts at `0` which represents the root.
+    pub depth: usize,
 }
 
 /// A description of the relationship between two keys in a [`Tree`] instance.
