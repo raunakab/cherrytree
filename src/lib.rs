@@ -235,53 +235,104 @@ where
     /// After performing this operation, the new parent of `key` will be
     /// `parent_key`.
     pub fn rebase(&mut self, key: K, parent_key: K) -> bool {
-        self.get_relationship(key, parent_key)
-            .map_or(false, |relationship| {
-                if let Relationship::Ancestral {
+        /// Performs a rebase where the `parent_key` is a sibling of `key`.
+        fn rebase_onto_sibling<K, V>(tree: &mut Tree<K, V>, key: K, parent_key: K)
+        where
+            K: Key,
+        {
+            let node = tree.inner_nodes.get_mut(key).unwrap();
+            let current_parent_key = node.parent_key.unwrap();
+
+            node.parent_key = Some(parent_key);
+
+            tree.inner_nodes
+                .get_mut(current_parent_key)
+                .unwrap()
+                .child_keys
+                .remove(&key);
+
+            tree.inner_nodes
+                .get_mut(parent_key)
+                .unwrap()
+                .child_keys
+                .insert(key);
+        }
+
+        /// Performs a rebase where the `parent_key` is an ancestor of `key`.
+        fn rebase_onto_ancestor<K, V>(tree: &mut Tree<K, V>, key: K, parent_key: K)
+        where
+            K: Key,
+        {
+            let node = tree.inner_nodes.get_mut(key).unwrap();
+            let current_parent_key = node.parent_key.unwrap();
+
+            if current_parent_key != parent_key {
+                node.parent_key = Some(parent_key);
+
+                tree.inner_nodes
+                    .get_mut(current_parent_key)
+                    .unwrap()
+                    .child_keys
+                    .remove(&key);
+
+                tree.inner_nodes
+                    .get_mut(parent_key)
+                    .unwrap()
+                    .child_keys
+                    .insert(key);
+            };
+        }
+
+        /// Performs a rebase where the `parent_key` is a decscendent of `key`.
+        fn rebase_onto_descendent<K, V>(tree: &mut Tree<K, V>, key: K, parent_key: K)
+        where
+            K: Key,
+        {
+            // let node = tree.inner_nodes.get_mut(key).unwrap();
+            // match node.parent_key {
+            //     Some(..) => todo!(),
+            //     None => {
+            //         node.parent_key = Some(parent_key);
+            //         let parent_node = tree.inner_nodes.get_mut(parent_key).unwrap();
+            //         parent_node.child_keys.insert(key);
+            //         let current_parent_key = parent_node.parent_key.unwrap();
+            //         parent_node.parent_key = None;
+            //         tree.inner_nodes.get_mut(current_parent_key).unwrap().child_keys.remove(&parent_key);
+            //     },
+            // }
+
+            todo!()
+        }
+
+        /// Rebase `key` onto `parent_key` when their [`Relationship`] has been
+        /// properly determined.
+        fn rebase<K, V>(tree: &mut Tree<K, V>, relationship: Relationship<K>, key: K, parent_key: K)
+        where
+            K: Key,
+        {
+            match relationship {
+                Relationship::Same => (),
+                Relationship::Ancestral {
                     ancestor_key,
                     descendent_key,
-                } = relationship
-                {
+                } => {
                     if parent_key == ancestor_key {
-                        let node = self.inner_nodes.get_mut(key).unwrap();
-                        let current_parent_key = node.parent_key.unwrap();
-                        if current_parent_key != parent_key {
-                            node.parent_key = Some(parent_key);
-                            self.inner_nodes
-                                .get_mut(current_parent_key)
-                                .unwrap()
-                                .child_keys
-                                .remove(&key);
-                            self.inner_nodes
-                                .get_mut(parent_key)
-                                .unwrap()
-                                .child_keys
-                                .insert(key);
-                        }
+                        rebase_onto_ancestor(tree, key, parent_key);
                     }
                     else if parent_key == descendent_key {
-                        todo!()
+                        rebase_onto_descendent(tree, key, parent_key);
                     }
                     else {
                         unreachable!()
                     }
                 }
-                else if let Relationship::Siblings { .. } = relationship {
-                    let node = self.inner_nodes.get_mut(key).unwrap();
-                    let current_parent_key = node.parent_key.unwrap();
+                Relationship::Siblings { .. } => rebase_onto_sibling(tree, key, parent_key),
+            };
+        }
 
-                    node.parent_key = Some(parent_key);
-                    self.inner_nodes
-                        .get_mut(current_parent_key)
-                        .unwrap()
-                        .child_keys
-                        .remove(&key);
-                    self.inner_nodes
-                        .get_mut(parent_key)
-                        .unwrap()
-                        .child_keys
-                        .insert(key);
-                };
+        self.get_relationship(key, parent_key)
+            .map_or(false, |relationship| {
+                rebase(self, relationship, key, parent_key);
 
                 true
             })
@@ -309,7 +360,8 @@ where
         self.root_key
     }
 
-    /// Returns a [`Node`] which corresponds to the given `key` inside of this [`Tree`] instance.
+    /// Returns a [`Node`] which corresponds to the given `key` inside of this
+    /// [`Tree`] instance.
     ///
     /// If the given `key` does not exist in this [`Tree`] instance, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
@@ -323,7 +375,8 @@ where
         })
     }
 
-    /// Returns a [`NodeMut`] which corresponds to the given `key` inside of this [`Tree`] instance.
+    /// Returns a [`NodeMut`] which corresponds to the given `key` inside of
+    /// this [`Tree`] instance.
     ///
     /// If the given `key` does not exist in this [`Tree`] instance, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
@@ -380,7 +433,7 @@ where
                 Relationship::Same
             }
             else {
-                let mut current_parent_key = tree.get(key1).unwrap().parent_key;
+                let mut current_parent_key = tree.inner_nodes.get(key1).unwrap().parent_key;
                 let length = tree.inner_nodes.len();
                 let mut path = HashSet::with_capacity(length);
 
@@ -394,13 +447,13 @@ where
                         }
                         Some(parent_key) => {
                             path.insert(parent_key);
-                            current_parent_key = tree.get(parent_key).unwrap().parent_key;
+                            current_parent_key = tree.inner_nodes.get(parent_key).unwrap().parent_key;
                         }
                         None => break,
                     }
                 }
 
-                let mut current_parent_key = tree.get(key2).unwrap().parent_key;
+                let mut current_parent_key = tree.inner_nodes.get(key2).unwrap().parent_key;
 
                 loop {
                     match current_parent_key {
@@ -417,7 +470,7 @@ where
                                 };
                             }
                             else {
-                                current_parent_key = tree.get(parent_key).unwrap().parent_key;
+                                current_parent_key = tree.inner_nodes.get(parent_key).unwrap().parent_key;
                             }
                         }
                         None => unreachable!(),
