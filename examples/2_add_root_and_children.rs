@@ -2,6 +2,7 @@
 //! insert a root value and 3 children values into it. In this example, the
 //! children values will be *direct* children of the root value.
 
+use indexmap::IndexSet;
 use pettree::Tree;
 use slotmap::DefaultKey;
 
@@ -23,7 +24,7 @@ fn main() {
         root_node.child_keys.clone(),
         vec![child_key_1, child_key_2, child_key_3]
             .into_iter()
-            .collect(),
+            .collect::<IndexSet<_>>(),
     );
 
     let child_node_1 = tree.get(child_key_1).unwrap();

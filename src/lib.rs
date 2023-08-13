@@ -59,7 +59,7 @@
 //! # }
 //! ```
 
-use hashbrown::HashSet;
+use indexmap::IndexSet;
 use slotmap::{
     Key,
     SlotMap,
@@ -138,7 +138,7 @@ where
 
         let root_key = self.inner_nodes.insert(InnerNode {
             parent_key: None,
-            child_keys: HashSet::with_capacity(capacity),
+            child_keys: IndexSet::with_capacity(capacity),
             value,
             depth: 0,
         });
@@ -175,7 +175,7 @@ where
 
             let key = self.inner_nodes.insert(InnerNode {
                 parent_key: Some(parent_key),
-                child_keys: HashSet::with_capacity(capacity),
+                child_keys: IndexSet::with_capacity(capacity),
                 value,
                 depth: parent_depth + 1,
             });
@@ -435,7 +435,7 @@ where
             else {
                 let mut current_parent_key = tree.inner_nodes.get(key1).unwrap().parent_key;
                 let length = tree.inner_nodes.len();
-                let mut path = HashSet::with_capacity(length);
+                let mut path = IndexSet::with_capacity(length);
 
                 loop {
                     match current_parent_key {
@@ -583,7 +583,7 @@ struct InnerNode<K, V> {
     parent_key: Option<K>,
 
     /// The children keys of this value.
-    child_keys: HashSet<K>,
+    child_keys: IndexSet<K>,
 
     /// The actual underlying value that is stored.
     value: V,
@@ -603,7 +603,7 @@ pub struct Node<'a, K, V> {
     pub parent_key: Option<K>,
 
     /// An immutable reference to the children keys of this value.
-    pub child_keys: &'a HashSet<K>,
+    pub child_keys: &'a IndexSet<K>,
 
     /// An immutable reference to the underlying value that is stored.
     pub value: &'a V,
@@ -623,7 +623,7 @@ pub struct NodeMut<'a, K, V> {
     pub parent_key: Option<K>,
 
     /// An immutable reference to the children keys of this value.
-    pub child_keys: &'a HashSet<K>,
+    pub child_keys: &'a IndexSet<K>,
 
     /// A mutable reference to the underlying value that is stored.
     pub value: &'a mut V,

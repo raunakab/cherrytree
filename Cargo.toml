@@ -8,4 +8,4 @@ license-file = "LICENSE-BSD-3-CLAUSE"
 
 [dependencies]
 slotmap = "1.0.6"
-hashbrown = "0.14.0"
+indexmap = "2.0.0"
