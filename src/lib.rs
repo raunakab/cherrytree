@@ -202,30 +202,45 @@ where
     /// instance. If you do not have a hint, then provide [`None`] as an
     /// argument.
     pub fn remove(&mut self, key: K, size_hint: Option<usize>) -> Option<V> {
-        self.root_key.and_then(|root_key| {
-            if key == root_key {
-                let node = self.inner_nodes.remove(key).unwrap();
-                self.clear();
-                Some(node.value)
-            }
-            else {
-                self.get_descendent_keys(key, size_hint)
-                    .map(|descendent_keys| {
-                        descendent_keys.into_iter().for_each(|descendent_key| {
-                            self.inner_nodes.remove(descendent_key).unwrap();
-                        });
+        fn remove_root<K, V>(tree: &mut Tree<K, V>, root_key: K) -> V
+        where
+            K: Key,
+        {
+            let value = tree.inner_nodes.remove(root_key).unwrap().value;
+            tree.clear();
+            value
+        }
 
-                        let node = self.inner_nodes.remove(key).unwrap();
-                        let parent_key = node.parent_key.unwrap();
-                        self.inner_nodes
-                            .get_mut(parent_key)
-                            .unwrap()
-                            .child_keys
-                            .remove(&key);
+        fn remove_non_root<K, V>(
+            tree: &mut Tree<K, V>,
+            key: K,
+            size_hint: Option<usize>,
+        ) -> Option<V>
+        where
+            K: Key,
+        {
+            tree.get_descendent_keys(key, size_hint)
+                .map(|descendent_keys| {
+                    descendent_keys.into_iter().for_each(|descendent_key| {
+                        tree.inner_nodes.remove(descendent_key).unwrap();
+                    });
 
-                        node.value
-                    })
-            }
+                    let node = tree.inner_nodes.remove(key).unwrap();
+
+                    let parent_key = node.parent_key.unwrap();
+                    tree.inner_nodes
+                        .get_mut(parent_key)
+                        .unwrap()
+                        .child_keys
+                        .remove(&key);
+
+                    node.value
+                })
+        }
+
+        self.root_key.and_then(|root_key| match key == root_key {
+            true => Some(remove_root(self, root_key)),
+            false => remove_non_root(self, key, size_hint),
         })
     }
 
@@ -297,8 +312,8 @@ where
             //         parent_node.child_keys.insert(key);
             //         let current_parent_key = parent_node.parent_key.unwrap();
             //         parent_node.parent_key = None;
-            //         tree.inner_nodes.get_mut(current_parent_key).unwrap().child_keys.remove(&parent_key);
-            //     },
+            //         tree.inner_nodes.get_mut(current_parent_key).unwrap().child_keys.
+            // remove(&parent_key);     },
             // }
 
             todo!()
@@ -447,7 +462,8 @@ where
                         }
                         Some(parent_key) => {
                             path.insert(parent_key);
-                            current_parent_key = tree.inner_nodes.get(parent_key).unwrap().parent_key;
+                            current_parent_key =
+                                tree.inner_nodes.get(parent_key).unwrap().parent_key;
                         }
                         None => break,
                     }
@@ -470,7 +486,8 @@ where
                                 };
                             }
                             else {
-                                current_parent_key = tree.inner_nodes.get(parent_key).unwrap().parent_key;
+                                current_parent_key =
+                                    tree.inner_nodes.get(parent_key).unwrap().parent_key;
                             }
                         }
                         None => unreachable!(),
