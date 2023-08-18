@@ -190,6 +190,14 @@ where
         })
     }
 
+    pub fn reorder_children<'a, F, I>(&'a mut self, key: K, reorder: F) -> bool
+    where
+        F: FnOnce(&'a IndexSet<K>) -> I,
+        I: IntoIterator<Item = K>,
+    {
+        todo!()
+    }
+
     /// Removes the value corresponding to the given `key` from this [`Tree`]
     /// instance as well as *all* of its children values.
     ///
