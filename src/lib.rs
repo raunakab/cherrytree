@@ -390,15 +390,11 @@ where
             };
         }
 
-        let relationship = self.get_relationship(key, new_parent_key);
-
-        if let Some(relationship) = relationship {
-            rebase(self, relationship, key, new_parent_key, size_hint);
-            true
-        }
-        else {
-            false
-        }
+        self.get_relationship(key, new_parent_key)
+            .map_or(false, |relationship| {
+                rebase(self, relationship, key, new_parent_key, size_hint);
+                true
+            })
     }
 
     /// Clears this [`Tree`] instance of *all* its values. Keeps the allocated
