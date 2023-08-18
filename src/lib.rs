@@ -197,10 +197,12 @@ where
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// removed value.
     ///
-    /// The `size_hint` argument should be used to provide some sort of guess
-    /// for how many children the given `key` has inside of this [`Tree`]
-    /// instance. If you do not have a hint, then provide [`None`] as an
-    /// argument.
+    /// The `size_hint` argument allows for one to specify the number of
+    /// descendents the given `key` has. This can be helpful in order
+    /// to allocate only the necessary amount of space and to avoid
+    /// additional allocations + `memcpy`'s.
+    ///
+    /// If you do not have a hint, then provide [`None`] as the argument.
     pub fn remove(&mut self, key: K, size_hint: Option<usize>) -> Option<V> {
         fn remove_root<K, V>(tree: &mut Tree<K, V>, root_key: K) -> V
         where
@@ -245,18 +247,29 @@ where
     }
 
     /// Rebase the subtree rooted at `key` to be a child underneath the subtree
-    /// rooted at `parent_key`.
+    /// rooted at `new_parent_key`.
     ///
     /// After performing this operation, the new parent of `key` will be
-    /// `parent_key`.
-    pub fn rebase(&mut self, key: K, parent_key: K) -> bool {
+    /// `new_parent_key`.
+    ///
+    /// The `size_hint` argument allows for one to specify the number of
+    /// descendents the given `key` has. This can be helpful in order
+    /// to allocate only the necessary amount of space and to avoid
+    /// additional allocations + `memcpy`'s.
+    ///
+    /// If you do not have a hint, then provide [`None`] as the argument.
+    pub fn rebase(&mut self, key: K, new_parent_key: K, size_hint: Option<usize>) -> bool {
+        /// Update the depth of the node corresponding to the given `key`, as
+        /// well as *ALL* of its descendents.
+        ///
+        /// The depth of each descendent will be updated appropriately based on
+        /// how many levels below the `key` that descendent-key is.
         fn update_depths<'a, K, V>(
             tree: &'a mut Tree<K, V>,
             key: K,
             depth: usize,
             size_hint: Option<usize>,
-        )
-        where
+        ) where
             K: Key,
         {
             let size_hint = size_hint.unwrap_or_default();
@@ -270,68 +283,63 @@ where
                         inner_node.depth = depth;
 
                         let new_depth = depth + 1;
-                        let child_keys_to_visit = inner_node.child_keys.iter().map(|&child_key_to_visit| (new_depth, child_key_to_visit));
+                        let child_keys_to_visit = inner_node
+                            .child_keys
+                            .iter()
+                            .map(|&child_key_to_visit| (new_depth, child_key_to_visit));
 
                         depths_and_keys_to_visit.extend(child_keys_to_visit);
-                    },
+                    }
                     None => break,
                 }
             }
         }
 
-        /// Performs a rebase where the `parent_key` is a sibling of `key`.
-        fn rebase_onto_sibling<K, V>(_: &mut Tree<K, V>, _: K, _: K)
-        where
+        /// Performs a generic rebase of the given `key` onto the given
+        /// `new_parent_key`.
+        ///
+        /// This rebasing algorithm is very generic and should be used during
+        /// the "happy" paths. (I.e., when the `new_parent_key` is *not*
+        /// a descendent of `key`).
+        fn rebase_generic<'a, K, V>(
+            tree: &'a mut Tree<K, V>,
+            key: K,
+            new_parent_key: K,
+            size_hint: Option<usize>,
+        ) where
             K: Key,
         {
-            // let node = tree.inner_nodes.get_mut(key).unwrap();
-            // let current_parent_key = node.parent_key.unwrap();
+            let node = tree.inner_nodes.get_mut(key).unwrap();
 
-            // node.parent_key = Some(parent_key);
+            let current_parent_key = node.parent_key.unwrap();
 
-            // tree.inner_nodes
-            //     .get_mut(current_parent_key)
-            //     .unwrap()
-            //     .child_keys
-            //     .remove(&key);
+            if current_parent_key != new_parent_key {
+                node.parent_key = Some(new_parent_key);
 
-            // tree.inner_nodes
-            //     .get_mut(parent_key)
-            //     .unwrap()
-            //     .child_keys
-            //     .insert(key);
+                let current_parent_node = tree.inner_nodes.get_mut(current_parent_key).unwrap();
+                let current_depth = current_parent_node.depth;
+                current_parent_node.child_keys.remove(&key);
 
-            todo!()
+                let new_parent_node = tree.inner_nodes.get_mut(new_parent_key).unwrap();
+                let new_parent_depth = new_parent_node.depth;
+                new_parent_node.child_keys.insert(key);
+
+                let new_depth = new_parent_depth.checked_add(1).unwrap();
+                if current_depth != new_depth {
+                    update_depths(tree, key, new_depth, size_hint);
+                };
+            };
         }
 
-        /// Performs a rebase where the `parent_key` is an ancestor of `key`.
-        fn rebase_onto_ancestor<K, V>(_: &mut Tree<K, V>, _: K, _: K)
-        where
-            K: Key,
-        {
-            // let node = tree.inner_nodes.get_mut(key).unwrap();
-            // let current_parent_key = node.parent_key.unwrap();
-
-            // if current_parent_key != parent_key {
-            //     node.parent_key = Some(parent_key);
-
-            //     tree.inner_nodes
-            //         .get_mut(current_parent_key)
-            //         .unwrap()
-            //         .child_keys
-            //         .remove(&key);
-
-            //     tree.inner_nodes
-            //         .get_mut(parent_key)
-            //         .unwrap()
-            //         .child_keys
-            //         .insert(key);
-            // };
-
-            todo!()
-        }
-
-        /// Performs a rebase where the `parent_key` is a decscendent of `key`.
+        /// Performs a rebase where the `new_parent_key` is a decscendent of
+        /// `key`.
+        ///
+        /// The reason or this function existing (as opposed to just using
+        /// `rebase_generic`) is because rebasing onto one of your own
+        /// descendents is much different than rebasing onto a non-descendent.
+        ///
+        /// For example, you need to worry about if the given `key` is the
+        /// root-key and how to deal with that specific edge-case.
         fn rebase_onto_descendent<K, V>(_: &mut Tree<K, V>, _: K, _: K)
         where
             K: Key,
@@ -354,34 +362,38 @@ where
 
         /// Rebase `key` onto `parent_key` when their [`Relationship`] has been
         /// properly determined.
-        fn rebase<K, V>(tree: &mut Tree<K, V>, relationship: Relationship<K>, key: K, parent_key: K)
-        where
+        fn rebase<K, V>(
+            tree: &mut Tree<K, V>,
+            relationship: Relationship<K>,
+            key: K,
+            new_parent_key: K,
+            size_hint: Option<usize>,
+        ) where
             K: Key,
         {
             match relationship {
                 Relationship::Same => (),
-                Relationship::Ancestral {
-                    ancestor_key,
-                    descendent_key,
-                } => {
-                    if parent_key == ancestor_key {
-                        rebase_onto_ancestor(tree, key, parent_key);
-                    }
-                    else if parent_key == descendent_key {
-                        rebase_onto_descendent(tree, key, parent_key);
-                    }
-                    else {
-                        unreachable!()
-                    }
+
+                Relationship::Ancestral { ancestor_key, .. } if new_parent_key == ancestor_key => {
+                    rebase_generic(tree, key, new_parent_key, size_hint)
                 }
-                Relationship::Siblings { .. } => rebase_onto_sibling(tree, key, parent_key),
+                Relationship::Ancestral { descendent_key, .. }
+                    if new_parent_key == descendent_key =>
+                {
+                    rebase_onto_descendent(tree, key, new_parent_key)
+                }
+                Relationship::Ancestral { .. } => unreachable!(),
+
+                Relationship::Siblings { .. } => {
+                    rebase_generic(tree, key, new_parent_key, size_hint)
+                }
             };
         }
 
-        let relationship = self.get_relationship(key, parent_key);
+        let relationship = self.get_relationship(key, new_parent_key);
 
         if let Some(relationship) = relationship {
-            rebase(self, relationship, key, parent_key);
+            rebase(self, relationship, key, new_parent_key, size_hint);
             true
         }
         else {
