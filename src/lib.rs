@@ -59,6 +59,8 @@
 //! # }
 //! ```
 
+use std::ops::RangeBounds;
+
 use indexmap::IndexSet;
 use slotmap::{
     Key,
@@ -190,12 +192,14 @@ where
         })
     }
 
-    pub fn reorder_children<'a, F, I>(&'a mut self, key: K, reorder: F) -> bool
-    where
-        F: FnOnce(&'a IndexSet<K>) -> I,
-        I: IntoIterator<Item = K>,
-    {
-        todo!()
+    /// Reorder the ordering of the child_keys of the given `key`.
+    ///
+    /// # Note:
+    /// If you pass in a new [`IndexSet`] which does not *exactly* match the ``
+    pub fn reorder_children(&mut self, key: K) -> Option<Reorderer<'_, K>> {
+        self.inner_nodes
+            .get_mut(key)
+            .map(|inner_node| Reorderer(&mut inner_node.child_keys))
     }
 
     /// Removes the value corresponding to the given `key` from this [`Tree`]
@@ -488,28 +492,28 @@ where
 
     /// Gets the [`Relationship`] status between two keys.
     ///
-    /// If either `key1` or `key2` do not exist in this [`Tree`] instance, then
+    /// If either `key_1` or `key_2` do not exist in this [`Tree`] instance, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// relationship between the two keys.
-    pub fn get_relationship(&self, key1: K, key2: K) -> Option<Relationship<K>> {
-        fn get_relationship<K, V>(tree: &Tree<K, V>, key1: K, key2: K) -> Relationship<K>
+    pub fn get_relationship(&self, key_1: K, key_2: K) -> Option<Relationship<K>> {
+        fn get_relationship<K, V>(tree: &Tree<K, V>, key_1: K, key_2: K) -> Relationship<K>
         where
             K: Key,
         {
-            if key1 == key2 {
+            if key_1 == key_2 {
                 Relationship::Same
             }
             else {
-                let mut current_parent_key = tree.inner_nodes.get(key1).unwrap().parent_key;
+                let mut current_parent_key = tree.inner_nodes.get(key_1).unwrap().parent_key;
                 let length = tree.inner_nodes.len();
                 let mut path = IndexSet::with_capacity(length);
 
                 loop {
                     match current_parent_key {
-                        Some(parent_key) if parent_key == key2 => {
+                        Some(parent_key) if parent_key == key_2 => {
                             return Relationship::Ancestral {
-                                ancestor_key: key2,
-                                descendent_key: key1,
+                                ancestor_key: key_2,
+                                descendent_key: key_1,
                             }
                         }
                         Some(parent_key) => {
@@ -521,14 +525,14 @@ where
                     }
                 }
 
-                let mut current_parent_key = tree.inner_nodes.get(key2).unwrap().parent_key;
+                let mut current_parent_key = tree.inner_nodes.get(key_2).unwrap().parent_key;
 
                 loop {
                     match current_parent_key {
-                        Some(parent_key) if parent_key == key1 => {
+                        Some(parent_key) if parent_key == key_1 => {
                             return Relationship::Ancestral {
-                                ancestor_key: key1,
-                                descendent_key: key2,
+                                ancestor_key: key_1,
+                                descendent_key: key_2,
                             }
                         }
                         Some(parent_key) => {
@@ -548,11 +552,11 @@ where
             }
         }
 
-        let key1_exists = self.inner_nodes.contains_key(key1);
-        let key2_exists = self.inner_nodes.contains_key(key2);
-        let both_keys_exist = key1_exists && key2_exists;
+        let key_1_exists = self.inner_nodes.contains_key(key_1);
+        let key_2_exists = self.inner_nodes.contains_key(key_2);
+        let both_keys_exist = key_1_exists && key_2_exists;
 
-        both_keys_exist.then(|| get_relationship(self, key1, key2))
+        both_keys_exist.then(|| get_relationship(self, key_1, key_2))
     }
 
     // Iter methods:
@@ -737,4 +741,85 @@ pub enum Relationship<K> {
         /// The common ancestor key that both of these keys originate from.
         common_ancestor_key: K,
     },
+}
+
+pub struct Reorderer<'a, K>(&'a mut IndexSet<K>)
+where
+    K: Key;
+
+impl<'a, K> Reorderer<'a, K>
+where
+    K: Key,
+{
+    // Check methods;
+
+    /// Checks whether or not this [`Reorderer`] instance is empty (i.e., has no
+    /// keys inside of it).
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Checks whether or not this [`Reorderer`] instance has the given `key`
+    /// inside of it.
+    pub fn contains(&self, key: K) -> bool {
+        self.0.contains(&key)
+    }
+
+    // Insertion/removal methods:
+
+    /// Switches the order of `key_1` and `key_2` in this [`Reorderer`] instance.
+    ///
+    /// # Note:
+    /// If `key_1` does not exist *OR* if `key_2` does not exist, then no switching is performed
+    /// and `false` is returned. Otherwise, performs the switch and returns `true`.
+    pub fn switch_keys(&mut self, key_1: K, key_2: K) -> bool {
+        let index_1 = self.0.get_index_of(&key_1);
+        let index_2 = self.0.get_index_of(&key_2);
+
+        index_1.zip(index_2).map_or(false, |(index_1, index_2)| {
+            self.0.swap_indices(index_1, index_2);
+            true
+        })
+    }
+
+    /// Switches the order of the keys located at `index_1` and `index_2` in this [`Reorderer`]
+    /// instance.
+    ///
+    /// # Note:
+    /// If `index_1` is out of bounds *OR* if `index_2` is out of bounds, then no switching is
+    /// performed and `false` is returned. Otherwise, performs the switch and returns `true`.
+    pub fn switch_indices(&mut self, index_1: usize, index_2: usize) -> bool {
+        let length = self.0.len();
+
+        if index_1 < length && index_2 < length {
+            self.0.swap_indices(index_1, index_2);
+            true
+        }
+        else { false }
+    }
+
+    pub fn slide<R>(&mut self, _: R, _: usize)
+    where
+        R: RangeBounds<usize>,
+    {
+        todo!()
+    }
+
+    // Getter/setter methods:
+
+    /// Get the key located at the given `index`.
+    ///
+    /// If the `index` is out of bounds, then [`None`] is returned. Otherwise,
+    /// returns [`Some(..)`] containing the key.
+    pub fn get_key_at_index(&self, index: usize) -> Option<K> {
+        self.0.get_index(index).copied()
+    }
+
+    /// Gets the index of the given `key` in this [`Reorderer`] instance.
+    ///
+    /// If the `key` does not exist in this instance, then [`None`] is returned.
+    /// Otherwise, returns [`Some(..)`] containing the index.
+    pub fn get_index_of_key(&self, key: K) -> Option<usize> {
+        self.0.get_index_of(&key)
+    }
 }
