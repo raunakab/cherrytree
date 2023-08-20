@@ -1,110 +1,95 @@
 #[path = "../common/mod.rs"]
 mod common;
 
-use slotmap::DefaultKey;
+use common::{
+    make_deserial_node,
+    make_tree_and_key_map,
+    node,
+    DeserialNode,
+};
 
 #[test]
-fn test_remove_empty() {
-    let mut tree = common::fixtures::empty_tree();
+fn test_remove() {
+    let tests = [
+        // Test remove from empty
+        ((None, 0), (None, None)),
+        // Test remove root-node in a single root-tree
+        ((Some(node! { 0 }), 0), (None, Some(0))),
+        // Test remove non-existent node
+        ((Some(node! { 0 }), 1), (Some(node! { 0 }), None)),
+        // Test remove root-node in a multi-node-tree
+        (
+            (
+                Some(node! {
+                    0,
+                    [
+                        node! { 1 },
+                        node! { 2 },
+                        node! { 3 },
+                    ],
+                }),
+                0,
+            ),
+            (None, Some(0)),
+        ),
+        // Test remove child-node in a multi-node-tree
+        (
+            (
+                Some(node! {
+                    0,
+                    [
+                        node! { 1 },
+                        node! { 2 },
+                        node! { 3 },
+                    ],
+                }),
+                1,
+            ),
+            (
+                Some(node! {
+                    0,
+                    [
+                        node! { 2 },
+                        node! { 3 },
+                    ],
+                }),
+                Some(1),
+            ),
+        ),
+        // Test remove child-node with its own children in a multi-node-tree
+        (
+            (
+                Some(node! {
+                    0,
+                    [
+                        node! { 1, [node!{ 10 }, node!{ 11 }] },
+                        node! { 2, [node!{ 12 }, node!{ 13 }] },
+                        node! { 3 },
+                    ],
+                }),
+                1,
+            ),
+            (
+                Some(node! {
+                    0,
+                    [
+                        node! { 2, [node!{ 12 }, node!{ 13 }] },
+                        node! { 3 },
+                    ],
+                }),
+                Some(1),
+            ),
+        ),
+    ];
 
-    let key = DefaultKey::default();
+    for ((deserial_node, key), (expected_deserial_node, expected_removed_value)) in tests {
+        let (mut tree, key_map) = make_tree_and_key_map(deserial_node.as_ref());
 
-    assert!(tree.remove(key, None).is_none());
-    assert!(tree.is_empty());
-}
+        let key = key_map.get(&key).copied().unwrap_or_default();
+        let actual_removed_value = tree.remove(key, None);
+        let actual_deserial_node = make_deserial_node(&tree);
 
-#[test]
-fn test_remove_random_key() {
-    let trees = common::fixtures::all();
-
-    let key = DefaultKey::default();
-
-    for mut tree in trees {
-        assert!(!tree.contains(key));
-        assert!(tree.remove(key, None).is_none());
-    }
-}
-
-#[test]
-fn test_remove_root() {
-    let trees = common::fixtures::all_non_empty();
-
-    for mut tree in trees {
-        assert!(!tree.is_empty());
-
-        let root_key = tree.root_key().unwrap();
-        assert!(tree.remove(root_key, None).is_some());
-
-        assert!(tree.is_empty());
-    }
-}
-
-#[test]
-fn test_remove_leaf() {
-    let trees = common::fixtures::all_depth_2_or_greater();
-
-    for mut tree in trees {
-        let key = common::utils::get_some_leaf_key(&tree);
-        let parent_key = tree.get(key).unwrap().parent_key.unwrap();
-
-        let length = tree.len();
-        let parent_child_keys = tree.get(parent_key).unwrap().child_keys;
-        let parent_child_keys_length = parent_child_keys.len();
-        assert!(tree.contains(parent_key));
-        assert!(parent_child_keys.contains(&key));
-
-        tree.remove(key, Some(0)).unwrap();
-
-        let new_length = tree.len();
-        let parent_child_keys = tree.get(parent_key).unwrap().child_keys;
-        let new_parent_child_keys_length = parent_child_keys.len();
-        assert!(!tree.contains(key));
-        assert!(!parent_child_keys.contains(&key));
-
-        assert_eq!(new_parent_child_keys_length, parent_child_keys_length - 1);
-        assert_eq!(new_length, length - 1);
-
-        assert!(tree.contains(parent_key));
-        assert!(!tree.contains(key));
-    }
-}
-
-#[test]
-fn test_remove_child_non_leaf() {
-    let trees = common::fixtures::all_depth_3_or_greater();
-
-    for mut tree in trees {
-        let key = common::utils::get_parent_of_some_leaf_key(&tree);
-        let node = tree.get(key).unwrap();
-        let child_keys = node.child_keys.clone();
-
-        let parent_key = node.parent_key.unwrap();
-        let parent_node = tree.get(parent_key).unwrap();
-        let parent_child_keys = parent_node.child_keys.clone();
-
-        let length = tree.len();
-
-        assert!(tree.contains(key));
-        assert!(tree.contains(parent_key));
-        child_keys
-            .iter()
-            .for_each(|&child_key| assert!(tree.contains(child_key)));
-        assert!(parent_child_keys.contains(&key));
-
-        tree.remove(key, None).unwrap();
-
-        let parent_node = tree.get(parent_key).unwrap();
-        let parent_child_keys = parent_node.child_keys.clone();
-
-        let new_length = tree.len();
-
-        assert!(!tree.contains(key));
-        assert!(tree.contains(parent_key));
-        child_keys
-            .iter()
-            .for_each(|&child_key| assert!(!tree.contains(child_key)));
-        assert!(!parent_child_keys.contains(&key));
-
-        assert_eq!(new_length, length - 1 - child_keys.len());
+        assert_eq!(actual_deserial_node, expected_deserial_node);
+        assert_eq!(actual_removed_value, expected_removed_value);
     }
 }

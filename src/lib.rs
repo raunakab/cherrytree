@@ -43,9 +43,9 @@
 //! let root_key = tree.insert_root(0);
 //!
 //! // Insert some children values:
-//! let child_key_1 = tree.insert(root_key, 1).unwrap();
-//! let child_key_2 = tree.insert(root_key, 2).unwrap();
-//! let child_key_3 = tree.insert(root_key, 3).unwrap();
+//! let child_key_1 = tree.insert(1, root_key).unwrap();
+//! let child_key_2 = tree.insert(2, root_key).unwrap();
+//! let child_key_3 = tree.insert(3, root_key).unwrap();
 //!
 //! // Get an immutable reference to one of the children's value:
 //! let child_node_1 = tree.get(child_key_1).unwrap();
@@ -152,8 +152,8 @@ where
     /// If this [`Tree`] instance does not contain the given `parent_key`, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// new key corresponding to this new child value.
-    pub fn insert(&mut self, parent_key: K, value: V) -> Option<K> {
-        self.insert_with_capacity(parent_key, value, 0)
+    pub fn insert(&mut self, value: V, parent_key: K) -> Option<K> {
+        self.insert_with_capacity(value, parent_key, 0)
     }
 
     /// Inserts a new child value into this [`Tree`] instance with a capacity
@@ -162,7 +162,7 @@ where
     /// If this [`Tree`] instance does not contain the given `parent_key`, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// new key corresponding to this new child value.
-    pub fn insert_with_capacity(&mut self, parent_key: K, value: V, capacity: usize) -> Option<K> {
+    pub fn insert_with_capacity(&mut self, value: V, parent_key: K, capacity: usize) -> Option<K> {
         self.inner_nodes.contains_key(parent_key).then(|| {
             // # Note:
             // The reason why we `get(parent_key)` once and then do a `get_mut(parent_key)`
@@ -190,14 +190,27 @@ where
         })
     }
 
-    pub fn reorder_children<F>(&mut self, key: K, produce_reordered_keys: F) -> bool
+    /// Reorder the children of the given `key` in this [`Tree`] instance.
+    ///
+    /// This function accepts a closure, `get_reordered_keys`, which passes in
+    /// the current children of the given `key`. The closure is then
+    /// expected to return a new [`IndexSet`] containing the original keys
+    /// in the specified order that the caller would like.
+    ///
+    /// # Note:
+    /// It is fine for the caller to return an [`IndexSet`] that is missing a
+    /// few keys from the original set of children keys! If
+    /// `get_reordered_keys` produces an [`IndexSet`] that has
+    /// some keys missing, then those keys will be removed from this [`Tree`]
+    /// instance.
+    pub fn reorder_children<F>(&mut self, key: K, get_reordered_keys: F) -> bool
     where
         F: FnOnce(&IndexSet<K>) -> IndexSet<K>,
     {
         self.inner_nodes
             .get(key)
             .map(|inner_node| {
-                let reordered_keys = produce_reordered_keys(&inner_node.child_keys);
+                let reordered_keys = get_reordered_keys(&inner_node.child_keys);
 
                 let keys_to_remove = inner_node
                     .child_keys
@@ -207,15 +220,19 @@ where
 
                 (reordered_keys, keys_to_remove)
             })
-            .map(|(reordered_keys, keys_to_remove)| {
-                keys_to_remove.into_iter().for_each(|key_to_remove| {
-                    self.get_descendent_keys(key_to_remove, None)
-                        .unwrap()
-                        .into_iter()
-                        .for_each(|descendent_key| {
-                            self.inner_nodes.remove(descendent_key).unwrap();
-                        })
-                });
+            .map(|(reordered_keys, mut keys_to_remove)| {
+                let keys_to_remove_length = keys_to_remove.len();
+                let tree_length = self.inner_nodes.len();
+
+                // # Note:
+                // Safe to perform `tree_length - keys_to_remove_length` because `tree_length >=
+                // keys_to_remove_length`.
+                keys_to_remove.reserve(tree_length - keys_to_remove_length);
+
+                while let Some(key_to_remove) = keys_to_remove.pop() {
+                    let inner_node = self.inner_nodes.remove(key_to_remove).unwrap();
+                    keys_to_remove.extend(inner_node.child_keys);
+                }
 
                 self.inner_nodes.get_mut(key).unwrap().child_keys = reordered_keys;
             })
@@ -253,28 +270,36 @@ where
         where
             K: Key,
         {
-            tree.get_descendent_keys(key, size_hint)
-                .map(|descendent_keys| {
-                    descendent_keys.into_iter().for_each(|descendent_key| {
-                        tree.inner_nodes.remove(descendent_key).unwrap();
-                    });
+            tree.inner_nodes.remove(key).map(|inner_node| {
+                let size_hint = size_hint.unwrap_or_else(|| tree.inner_nodes.len());
 
-                    let node = tree.inner_nodes.remove(key).unwrap();
+                let mut to_visit_keys = Vec::with_capacity(size_hint);
+                to_visit_keys.extend(inner_node.child_keys);
 
-                    let parent_key = node.parent_key.unwrap();
-                    tree.inner_nodes
-                        .get_mut(parent_key)
-                        .unwrap()
-                        .child_keys
-                        .remove(&key);
+                while let Some(to_visit_key) = to_visit_keys.pop() {
+                    let inner_node = tree.inner_nodes.remove(to_visit_key).unwrap();
+                    to_visit_keys.extend(inner_node.child_keys);
+                }
 
-                    node.value
-                })
+                let parent_key = inner_node.parent_key.unwrap();
+                tree.inner_nodes
+                    .get_mut(parent_key)
+                    .unwrap()
+                    .child_keys
+                    .shift_remove(&key);
+
+                inner_node.value
+            })
         }
 
-        self.root_key.and_then(|root_key| match key == root_key {
-            true => Some(remove_root(self, root_key)),
-            false => remove_non_root(self, key, size_hint),
+        self.root_key.and_then(|root_key| {
+            if key == root_key {
+                let root_value = remove_root(self, root_key);
+                Some(root_value)
+            }
+            else {
+                remove_non_root(self, key, size_hint)
+            }
         })
     }
 
@@ -349,7 +374,7 @@ where
 
                 let current_parent_node = tree.inner_nodes.get_mut(current_parent_key).unwrap();
                 let current_depth = current_parent_node.depth;
-                current_parent_node.child_keys.remove(&key);
+                current_parent_node.child_keys.shift_remove(&key);
 
                 let new_parent_node = tree.inner_nodes.get_mut(new_parent_key).unwrap();
                 let new_parent_depth = new_parent_node.depth;
@@ -477,35 +502,6 @@ where
             child_keys: &inner_node.child_keys,
             value: &mut inner_node.value,
             depth: inner_node.depth,
-        })
-    }
-
-    /// Returns a [`Vec`] of all the descendent keys of the given `key`
-    /// (not including the given `key` itself).
-    ///
-    /// If the given `key` does not exist in this [`Tree`] instance, then
-    /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
-    /// descendent keys (including the given `key`).
-    pub fn get_descendent_keys(&self, key: K, size_hint: Option<usize>) -> Option<Vec<K>> {
-        self.inner_nodes.get(key).map(|node| {
-            let size_hint = size_hint.unwrap_or_else(|| self.inner_nodes.len());
-
-            let mut to_visit_keys = node.child_keys.iter().fold(
-                Vec::with_capacity(size_hint),
-                |mut vec, &child_key| {
-                    vec.push(child_key);
-                    vec
-                },
-            );
-            let mut descendent_keys = Vec::with_capacity(size_hint);
-
-            while let Some(to_visit_key) = to_visit_keys.pop() {
-                descendent_keys.push(to_visit_key);
-                let to_visit_child_keys = &self.inner_nodes.get(to_visit_key).unwrap().child_keys;
-                to_visit_keys.extend(to_visit_child_keys);
-            }
-
-            descendent_keys
         })
     }
 
