@@ -199,22 +199,26 @@ where
             .map(|inner_node| {
                 let reordered_keys = produce_reordered_keys(&inner_node.child_keys);
 
-                let keys_to_remove = inner_node.child_keys
+                let keys_to_remove = inner_node
+                    .child_keys
                     .difference(&reordered_keys)
                     .copied()
                     .collect::<Vec<_>>();
 
                 (reordered_keys, keys_to_remove)
             })
-
             .map(|(reordered_keys, keys_to_remove)| {
                 keys_to_remove.into_iter().for_each(|key_to_remove| {
-                    self.remove(key_to_remove, None).unwrap();
+                    self.get_descendent_keys(key_to_remove, None)
+                        .unwrap()
+                        .into_iter()
+                        .for_each(|descendent_key| {
+                            self.inner_nodes.remove(descendent_key).unwrap();
+                        })
                 });
 
                 self.inner_nodes.get_mut(key).unwrap().child_keys = reordered_keys;
             })
-
             .is_some()
     }
 
