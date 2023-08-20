@@ -59,8 +59,6 @@
 //! # }
 //! ```
 
-use std::ops::RangeBounds;
-
 use indexmap::IndexSet;
 use slotmap::{
     Key,
@@ -192,14 +190,32 @@ where
         })
     }
 
-    /// Reorder the ordering of the child_keys of the given `key`.
-    ///
-    /// # Note:
-    /// If you pass in a new [`IndexSet`] which does not *exactly* match the ``
-    pub fn reorder_children(&mut self, key: K) -> Option<Reorderer<'_, K>> {
+    pub fn reorder_children<F>(&mut self, key: K, produce_reordered_keys: F) -> bool
+    where
+        F: FnOnce(&IndexSet<K>) -> IndexSet<K>,
+    {
         self.inner_nodes
-            .get_mut(key)
-            .map(|inner_node| Reorderer(&mut inner_node.child_keys))
+            .get(key)
+            .map(|inner_node| {
+                let reordered_keys = produce_reordered_keys(&inner_node.child_keys);
+
+                let keys_to_remove = inner_node.child_keys
+                    .difference(&reordered_keys)
+                    .copied()
+                    .collect::<Vec<_>>();
+
+                (reordered_keys, keys_to_remove)
+            })
+
+            .map(|(reordered_keys, keys_to_remove)| {
+                keys_to_remove.into_iter().for_each(|key_to_remove| {
+                    self.remove(key_to_remove, None).unwrap();
+                });
+
+                self.inner_nodes.get_mut(key).unwrap().child_keys = reordered_keys;
+            })
+
+            .is_some()
     }
 
     /// Removes the value corresponding to the given `key` from this [`Tree`]
@@ -270,14 +286,18 @@ where
     /// additional allocations + `memcpy`'s.
     ///
     /// If you do not have a hint, then provide [`None`] as the argument.
+    ///
+    /// If `key` was not found in this [`Tree`] instance, then `false` is
+    /// returned and no updates to the [`Tree`] are made. Otherwise,
+    /// performs the requested rebase and returns `true`.
     pub fn rebase(&mut self, key: K, new_parent_key: K, size_hint: Option<usize>) -> bool {
         /// Update the depth of the node corresponding to the given `key`, as
         /// well as *ALL* of its descendents.
         ///
         /// The depth of each descendent will be updated appropriately based on
         /// how many levels below the `key` that descendent-key is.
-        fn update_depths<'a, K, V>(
-            tree: &'a mut Tree<K, V>,
+        fn update_depths<K, V>(
+            tree: &mut Tree<K, V>,
             key: K,
             depth: usize,
             size_hint: Option<usize>,
@@ -288,22 +308,17 @@ where
             let mut depths_and_keys_to_visit = Vec::with_capacity(size_hint);
             depths_and_keys_to_visit.push((depth, key));
 
-            loop {
-                match depths_and_keys_to_visit.pop() {
-                    Some((depth, key_to_visit)) => {
-                        let inner_node = tree.inner_nodes.get_mut(key_to_visit).unwrap();
-                        inner_node.depth = depth;
+            while let Some((depth, key_to_visit)) = depths_and_keys_to_visit.pop() {
+                let inner_node = tree.inner_nodes.get_mut(key_to_visit).unwrap();
+                inner_node.depth = depth;
 
-                        let new_depth = depth + 1;
-                        let child_keys_to_visit = inner_node
-                            .child_keys
-                            .iter()
-                            .map(|&child_key_to_visit| (new_depth, child_key_to_visit));
+                let new_depth = depth.checked_add(1).unwrap();
+                let child_keys_to_visit = inner_node
+                    .child_keys
+                    .iter()
+                    .map(|&child_key_to_visit| (new_depth, child_key_to_visit));
 
-                        depths_and_keys_to_visit.extend(child_keys_to_visit);
-                    }
-                    None => break,
-                }
+                depths_and_keys_to_visit.extend(child_keys_to_visit);
             }
         }
 
@@ -313,8 +328,8 @@ where
         /// This rebasing algorithm is very generic and should be used during
         /// the "happy" paths. (I.e., when the `new_parent_key` is *not*
         /// a descendent of `key`).
-        fn rebase_generic<'a, K, V>(
-            tree: &'a mut Tree<K, V>,
+        fn rebase_generic<K, V>(
+            tree: &mut Tree<K, V>,
             key: K,
             new_parent_key: K,
             size_hint: Option<usize>,
@@ -403,10 +418,10 @@ where
         }
 
         self.get_relationship(key, new_parent_key)
-            .map_or(false, |relationship| {
+            .map(|relationship| {
                 rebase(self, relationship, key, new_parent_key, size_hint);
-                true
             })
+            .is_some()
     }
 
     /// Clears this [`Tree`] instance of *all* its values. Keeps the allocated
@@ -492,9 +507,9 @@ where
 
     /// Gets the [`Relationship`] status between two keys.
     ///
-    /// If either `key_1` or `key_2` do not exist in this [`Tree`] instance, then
-    /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
-    /// relationship between the two keys.
+    /// If either `key_1` or `key_2` do not exist in this [`Tree`] instance,
+    /// then [`None`] is returned. Otherwise, returns [`Some(..)`]
+    /// containing the relationship between the two keys.
     pub fn get_relationship(&self, key_1: K, key_2: K) -> Option<Relationship<K>> {
         fn get_relationship<K, V>(tree: &Tree<K, V>, key_1: K, key_2: K) -> Relationship<K>
         where
@@ -741,85 +756,4 @@ pub enum Relationship<K> {
         /// The common ancestor key that both of these keys originate from.
         common_ancestor_key: K,
     },
-}
-
-pub struct Reorderer<'a, K>(&'a mut IndexSet<K>)
-where
-    K: Key;
-
-impl<'a, K> Reorderer<'a, K>
-where
-    K: Key,
-{
-    // Check methods;
-
-    /// Checks whether or not this [`Reorderer`] instance is empty (i.e., has no
-    /// keys inside of it).
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    /// Checks whether or not this [`Reorderer`] instance has the given `key`
-    /// inside of it.
-    pub fn contains(&self, key: K) -> bool {
-        self.0.contains(&key)
-    }
-
-    // Insertion/removal methods:
-
-    /// Switches the order of `key_1` and `key_2` in this [`Reorderer`] instance.
-    ///
-    /// # Note:
-    /// If `key_1` does not exist *OR* if `key_2` does not exist, then no switching is performed
-    /// and `false` is returned. Otherwise, performs the switch and returns `true`.
-    pub fn switch_keys(&mut self, key_1: K, key_2: K) -> bool {
-        let index_1 = self.0.get_index_of(&key_1);
-        let index_2 = self.0.get_index_of(&key_2);
-
-        index_1.zip(index_2).map_or(false, |(index_1, index_2)| {
-            self.0.swap_indices(index_1, index_2);
-            true
-        })
-    }
-
-    /// Switches the order of the keys located at `index_1` and `index_2` in this [`Reorderer`]
-    /// instance.
-    ///
-    /// # Note:
-    /// If `index_1` is out of bounds *OR* if `index_2` is out of bounds, then no switching is
-    /// performed and `false` is returned. Otherwise, performs the switch and returns `true`.
-    pub fn switch_indices(&mut self, index_1: usize, index_2: usize) -> bool {
-        let length = self.0.len();
-
-        if index_1 < length && index_2 < length {
-            self.0.swap_indices(index_1, index_2);
-            true
-        }
-        else { false }
-    }
-
-    pub fn slide<R>(&mut self, _: R, _: usize)
-    where
-        R: RangeBounds<usize>,
-    {
-        todo!()
-    }
-
-    // Getter/setter methods:
-
-    /// Get the key located at the given `index`.
-    ///
-    /// If the `index` is out of bounds, then [`None`] is returned. Otherwise,
-    /// returns [`Some(..)`] containing the key.
-    pub fn get_key_at_index(&self, index: usize) -> Option<K> {
-        self.0.get_index(index).copied()
-    }
-
-    /// Gets the index of the given `key` in this [`Reorderer`] instance.
-    ///
-    /// If the `key` does not exist in this instance, then [`None`] is returned.
-    /// Otherwise, returns [`Some(..)`] containing the index.
-    pub fn get_index_of_key(&self, key: K) -> Option<usize> {
-        self.0.get_index_of(&key)
-    }
 }
