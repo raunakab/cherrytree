@@ -43,9 +43,9 @@
 //! let root_key = tree.insert_root(0);
 //!
 //! // Insert some children values:
-//! let child_key_1 = tree.insert(root_key, 1).unwrap();
-//! let child_key_2 = tree.insert(root_key, 2).unwrap();
-//! let child_key_3 = tree.insert(root_key, 3).unwrap();
+//! let child_key_1 = tree.insert(1, root_key).unwrap();
+//! let child_key_2 = tree.insert(2, root_key).unwrap();
+//! let child_key_3 = tree.insert(3, root_key).unwrap();
 //!
 //! // Get an immutable reference to one of the children's value:
 //! let child_node_1 = tree.get(child_key_1).unwrap();
@@ -152,8 +152,8 @@ where
     /// If this [`Tree`] instance does not contain the given `parent_key`, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// new key corresponding to this new child value.
-    pub fn insert(&mut self, parent_key: K, value: V) -> Option<K> {
-        self.insert_with_capacity(parent_key, value, 0)
+    pub fn insert(&mut self, value: V, parent_key: K) -> Option<K> {
+        self.insert_with_capacity(value, parent_key, 0)
     }
 
     /// Inserts a new child value into this [`Tree`] instance with a capacity
@@ -162,7 +162,7 @@ where
     /// If this [`Tree`] instance does not contain the given `parent_key`, then
     /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
     /// new key corresponding to this new child value.
-    pub fn insert_with_capacity(&mut self, parent_key: K, value: V, capacity: usize) -> Option<K> {
+    pub fn insert_with_capacity(&mut self, value: V, parent_key: K, capacity: usize) -> Option<K> {
         self.inner_nodes.contains_key(parent_key).then(|| {
             // # Note:
             // The reason why we `get(parent_key)` once and then do a `get_mut(parent_key)`
@@ -188,6 +188,69 @@ where
 
             key
         })
+    }
+
+    /// Reorder the children of the given `key` in this [`Tree`] instance.
+    ///
+    /// This function accepts a closure, `get_reordered_keys`, which passes in
+    /// the current children of the given `key`. The closure is then
+    /// expected to return a new [`IndexSet`] containing the original keys
+    /// in the specified order that the caller would like.
+    ///
+    /// # Note:
+    /// Callers must ensure that `get_reordered_keys` returns a [`IndexSet`]
+    /// that is a *strict* subseteq of the current child keys. If
+    /// `get_reordered_keys` returns an [`IndexSet`] that contains at least one
+    /// key that was not contained in the original child keys, then this
+    /// function will return `false`.
+    ///
+    /// However, returning an [`IndexSet`] that is *missing* a few keys from the
+    /// original child keys is fine. This function will interpret that
+    /// situation as the caller requesting to have those keys removed from
+    /// this [`Tree`] instance.
+    pub fn reorder_children<F>(&mut self, key: K, get_reordered_keys: F) -> bool
+    where
+        F: FnOnce(&IndexSet<K>) -> IndexSet<K>,
+    {
+        self.inner_nodes
+            .get(key)
+            .and_then(|inner_node| {
+                let child_keys = &inner_node.child_keys;
+
+                let reordered_keys = get_reordered_keys(&inner_node.child_keys);
+
+                let difference = reordered_keys.difference(child_keys).next();
+
+                match difference {
+                    Some(..) => None,
+                    None => {
+                        let keys_to_remove = inner_node
+                            .child_keys
+                            .difference(&reordered_keys)
+                            .copied()
+                            .collect::<Vec<_>>();
+
+                        Some((reordered_keys, keys_to_remove))
+                    }
+                }
+            })
+            .map(|(reordered_keys, mut keys_to_remove)| {
+                let keys_to_remove_length = keys_to_remove.len();
+                let tree_length = self.inner_nodes.len();
+
+                // # Note:
+                // Safe to perform `tree_length - keys_to_remove_length` because `tree_length >=
+                // keys_to_remove_length`.
+                keys_to_remove.reserve(tree_length - keys_to_remove_length);
+
+                while let Some(key_to_remove) = keys_to_remove.pop() {
+                    let inner_node = self.inner_nodes.remove(key_to_remove).unwrap();
+                    keys_to_remove.extend(inner_node.child_keys);
+                }
+
+                self.inner_nodes.get_mut(key).unwrap().child_keys = reordered_keys;
+            })
+            .is_some()
     }
 
     /// Removes the value corresponding to the given `key` from this [`Tree`]
@@ -221,28 +284,36 @@ where
         where
             K: Key,
         {
-            tree.get_descendent_keys(key, size_hint)
-                .map(|descendent_keys| {
-                    descendent_keys.into_iter().for_each(|descendent_key| {
-                        tree.inner_nodes.remove(descendent_key).unwrap();
-                    });
+            tree.inner_nodes.remove(key).map(|inner_node| {
+                let size_hint = size_hint.unwrap_or_else(|| tree.inner_nodes.len());
 
-                    let node = tree.inner_nodes.remove(key).unwrap();
+                let mut to_visit_keys = Vec::with_capacity(size_hint);
+                to_visit_keys.extend(inner_node.child_keys);
 
-                    let parent_key = node.parent_key.unwrap();
-                    tree.inner_nodes
-                        .get_mut(parent_key)
-                        .unwrap()
-                        .child_keys
-                        .remove(&key);
+                while let Some(to_visit_key) = to_visit_keys.pop() {
+                    let inner_node = tree.inner_nodes.remove(to_visit_key).unwrap();
+                    to_visit_keys.extend(inner_node.child_keys);
+                }
 
-                    node.value
-                })
+                let parent_key = inner_node.parent_key.unwrap();
+                tree.inner_nodes
+                    .get_mut(parent_key)
+                    .unwrap()
+                    .child_keys
+                    .shift_remove(&key);
+
+                inner_node.value
+            })
         }
 
-        self.root_key.and_then(|root_key| match key == root_key {
-            true => Some(remove_root(self, root_key)),
-            false => remove_non_root(self, key, size_hint),
+        self.root_key.and_then(|root_key| {
+            if key == root_key {
+                let root_value = remove_root(self, root_key);
+                Some(root_value)
+            }
+            else {
+                remove_non_root(self, key, size_hint)
+            }
         })
     }
 
@@ -258,14 +329,18 @@ where
     /// additional allocations + `memcpy`'s.
     ///
     /// If you do not have a hint, then provide [`None`] as the argument.
+    ///
+    /// If `key` was not found in this [`Tree`] instance, then `false` is
+    /// returned and no updates to the [`Tree`] are made. Otherwise,
+    /// performs the requested rebase and returns `true`.
     pub fn rebase(&mut self, key: K, new_parent_key: K, size_hint: Option<usize>) -> bool {
         /// Update the depth of the node corresponding to the given `key`, as
         /// well as *ALL* of its descendents.
         ///
         /// The depth of each descendent will be updated appropriately based on
         /// how many levels below the `key` that descendent-key is.
-        fn update_depths<'a, K, V>(
-            tree: &'a mut Tree<K, V>,
+        fn update_depths<K, V>(
+            tree: &mut Tree<K, V>,
             key: K,
             depth: usize,
             size_hint: Option<usize>,
@@ -276,22 +351,17 @@ where
             let mut depths_and_keys_to_visit = Vec::with_capacity(size_hint);
             depths_and_keys_to_visit.push((depth, key));
 
-            loop {
-                match depths_and_keys_to_visit.pop() {
-                    Some((depth, key_to_visit)) => {
-                        let inner_node = tree.inner_nodes.get_mut(key_to_visit).unwrap();
-                        inner_node.depth = depth;
+            while let Some((depth, key_to_visit)) = depths_and_keys_to_visit.pop() {
+                let inner_node = tree.inner_nodes.get_mut(key_to_visit).unwrap();
+                inner_node.depth = depth;
 
-                        let new_depth = depth + 1;
-                        let child_keys_to_visit = inner_node
-                            .child_keys
-                            .iter()
-                            .map(|&child_key_to_visit| (new_depth, child_key_to_visit));
+                let new_depth = depth.checked_add(1).unwrap();
+                let child_keys_to_visit = inner_node
+                    .child_keys
+                    .iter()
+                    .map(|&child_key_to_visit| (new_depth, child_key_to_visit));
 
-                        depths_and_keys_to_visit.extend(child_keys_to_visit);
-                    }
-                    None => break,
-                }
+                depths_and_keys_to_visit.extend(child_keys_to_visit);
             }
         }
 
@@ -301,8 +371,8 @@ where
         /// This rebasing algorithm is very generic and should be used during
         /// the "happy" paths. (I.e., when the `new_parent_key` is *not*
         /// a descendent of `key`).
-        fn rebase_generic<'a, K, V>(
-            tree: &'a mut Tree<K, V>,
+        fn rebase_generic<K, V>(
+            tree: &mut Tree<K, V>,
             key: K,
             new_parent_key: K,
             size_hint: Option<usize>,
@@ -318,7 +388,7 @@ where
 
                 let current_parent_node = tree.inner_nodes.get_mut(current_parent_key).unwrap();
                 let current_depth = current_parent_node.depth;
-                current_parent_node.child_keys.remove(&key);
+                current_parent_node.child_keys.shift_remove(&key);
 
                 let new_parent_node = tree.inner_nodes.get_mut(new_parent_key).unwrap();
                 let new_parent_depth = new_parent_node.depth;
@@ -391,10 +461,10 @@ where
         }
 
         self.get_relationship(key, new_parent_key)
-            .map_or(false, |relationship| {
+            .map(|relationship| {
                 rebase(self, relationship, key, new_parent_key, size_hint);
-                true
             })
+            .is_some()
     }
 
     /// Clears this [`Tree`] instance of *all* its values. Keeps the allocated
@@ -449,59 +519,30 @@ where
         })
     }
 
-    /// Returns a [`Vec`] of all the descendent keys of the given `key`
-    /// (not including the given `key` itself).
-    ///
-    /// If the given `key` does not exist in this [`Tree`] instance, then
-    /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
-    /// descendent keys (including the given `key`).
-    pub fn get_descendent_keys(&self, key: K, size_hint: Option<usize>) -> Option<Vec<K>> {
-        self.inner_nodes.get(key).map(|node| {
-            let size_hint = size_hint.unwrap_or_else(|| self.inner_nodes.len());
-
-            let mut to_visit_keys = node.child_keys.iter().fold(
-                Vec::with_capacity(size_hint),
-                |mut vec, &child_key| {
-                    vec.push(child_key);
-                    vec
-                },
-            );
-            let mut descendent_keys = Vec::with_capacity(size_hint);
-
-            while let Some(to_visit_key) = to_visit_keys.pop() {
-                descendent_keys.push(to_visit_key);
-                let to_visit_child_keys = &self.inner_nodes.get(to_visit_key).unwrap().child_keys;
-                to_visit_keys.extend(to_visit_child_keys);
-            }
-
-            descendent_keys
-        })
-    }
-
     /// Gets the [`Relationship`] status between two keys.
     ///
-    /// If either `key1` or `key2` do not exist in this [`Tree`] instance, then
-    /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
-    /// relationship between the two keys.
-    pub fn get_relationship(&self, key1: K, key2: K) -> Option<Relationship<K>> {
-        fn get_relationship<K, V>(tree: &Tree<K, V>, key1: K, key2: K) -> Relationship<K>
+    /// If either `key_1` or `key_2` do not exist in this [`Tree`] instance,
+    /// then [`None`] is returned. Otherwise, returns [`Some(..)`]
+    /// containing the relationship between the two keys.
+    pub fn get_relationship(&self, key_1: K, key_2: K) -> Option<Relationship<K>> {
+        fn get_relationship<K, V>(tree: &Tree<K, V>, key_1: K, key_2: K) -> Relationship<K>
         where
             K: Key,
         {
-            if key1 == key2 {
+            if key_1 == key_2 {
                 Relationship::Same
             }
             else {
-                let mut current_parent_key = tree.inner_nodes.get(key1).unwrap().parent_key;
+                let mut current_parent_key = tree.inner_nodes.get(key_1).unwrap().parent_key;
                 let length = tree.inner_nodes.len();
                 let mut path = IndexSet::with_capacity(length);
 
                 loop {
                     match current_parent_key {
-                        Some(parent_key) if parent_key == key2 => {
+                        Some(parent_key) if parent_key == key_2 => {
                             return Relationship::Ancestral {
-                                ancestor_key: key2,
-                                descendent_key: key1,
+                                ancestor_key: key_2,
+                                descendent_key: key_1,
                             }
                         }
                         Some(parent_key) => {
@@ -513,14 +554,14 @@ where
                     }
                 }
 
-                let mut current_parent_key = tree.inner_nodes.get(key2).unwrap().parent_key;
+                let mut current_parent_key = tree.inner_nodes.get(key_2).unwrap().parent_key;
 
                 loop {
                     match current_parent_key {
-                        Some(parent_key) if parent_key == key1 => {
+                        Some(parent_key) if parent_key == key_1 => {
                             return Relationship::Ancestral {
-                                ancestor_key: key1,
-                                descendent_key: key2,
+                                ancestor_key: key_1,
+                                descendent_key: key_2,
                             }
                         }
                         Some(parent_key) => {
@@ -540,11 +581,11 @@ where
             }
         }
 
-        let key1_exists = self.inner_nodes.contains_key(key1);
-        let key2_exists = self.inner_nodes.contains_key(key2);
-        let both_keys_exist = key1_exists && key2_exists;
+        let key_1_exists = self.inner_nodes.contains_key(key_1);
+        let key_2_exists = self.inner_nodes.contains_key(key_2);
+        let both_keys_exist = key_1_exists && key_2_exists;
 
-        both_keys_exist.then(|| get_relationship(self, key1, key2))
+        both_keys_exist.then(|| get_relationship(self, key_1, key_2))
     }
 
     // Iter methods:
@@ -699,7 +740,7 @@ pub struct NodeMut<'a, K, V> {
 ///
 /// Each variant of a [`Relationship`] is based off of familial relationships
 /// (i.e., parents, grandparent, great-grandparents are all your ancestors).
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Relationship<K> {
     /// The two keys are the exact same.
     Same,

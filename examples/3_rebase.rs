@@ -38,13 +38,15 @@ fn main() {
 
     let root_key = tree.insert_root(0);
 
-    let child_key_1 = tree.insert(root_key, 1).unwrap();
-    let child_key_2 = tree.insert(root_key, 2).unwrap();
-    tree.insert(child_key_1, 3).unwrap();
-    let child_key_4 = tree.insert(child_key_1, 4).unwrap();
-    tree.insert(child_key_4, 5).unwrap();
-    tree.insert(child_key_2, 6).unwrap();
-    tree.insert(child_key_2, 7).unwrap();
+    let child_key_1 = tree.insert(1, root_key).unwrap();
+    let child_key_2 = tree.insert(2, root_key).unwrap();
+
+    tree.insert(3, child_key_1).unwrap();
+
+    let child_key_4 = tree.insert(4, child_key_1).unwrap();
+    tree.insert(5, child_key_4).unwrap();
+    tree.insert(6, child_key_2).unwrap();
+    tree.insert(7, child_key_2).unwrap();
 
     assert!(tree.rebase(child_key_4, child_key_2, None));
 }

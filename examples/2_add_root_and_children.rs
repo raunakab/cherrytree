@@ -11,9 +11,9 @@ fn main() {
 
     let root_key = tree.insert_root(0);
 
-    let child_key_1 = tree.insert(root_key, 1).unwrap();
-    let child_key_2 = tree.insert(root_key, 2).unwrap();
-    let child_key_3 = tree.insert(root_key, 3).unwrap();
+    let child_key_1 = tree.insert(1, root_key).unwrap();
+    let child_key_2 = tree.insert(2, root_key).unwrap();
+    let child_key_3 = tree.insert(3, root_key).unwrap();
 
     assert!(!tree.is_empty());
 
