@@ -198,27 +198,41 @@ where
     /// in the specified order that the caller would like.
     ///
     /// # Note:
-    /// It is fine for the caller to return an [`IndexSet`] that is missing a
-    /// few keys from the original set of children keys! If
-    /// `get_reordered_keys` produces an [`IndexSet`] that has
-    /// some keys missing, then those keys will be removed from this [`Tree`]
-    /// instance.
+    /// Callers must ensure that `get_reordered_keys` returns a [`IndexSet`]
+    /// that is a *strict* subseteq of the current child keys. If
+    /// `get_reordered_keys` returns an [`IndexSet`] that contains at least one
+    /// key that was not contained in the original child keys, then this
+    /// function will return `false`.
+    ///
+    /// However, returning an [`IndexSet`] that is *missing* a few keys from the
+    /// original child keys is fine. This function will interpret that
+    /// situation as the caller requesting to have those keys removed from
+    /// this [`Tree`] instance.
     pub fn reorder_children<F>(&mut self, key: K, get_reordered_keys: F) -> bool
     where
         F: FnOnce(&IndexSet<K>) -> IndexSet<K>,
     {
         self.inner_nodes
             .get(key)
-            .map(|inner_node| {
+            .and_then(|inner_node| {
+                let child_keys = &inner_node.child_keys;
+
                 let reordered_keys = get_reordered_keys(&inner_node.child_keys);
 
-                let keys_to_remove = inner_node
-                    .child_keys
-                    .difference(&reordered_keys)
-                    .copied()
-                    .collect::<Vec<_>>();
+                let difference = reordered_keys.difference(child_keys).next();
 
-                (reordered_keys, keys_to_remove)
+                match difference {
+                    Some(..) => None,
+                    None => {
+                        let keys_to_remove = inner_node
+                            .child_keys
+                            .difference(&reordered_keys)
+                            .copied()
+                            .collect::<Vec<_>>();
+
+                        Some((reordered_keys, keys_to_remove))
+                    }
+                }
             })
             .map(|(reordered_keys, mut keys_to_remove)| {
                 let keys_to_remove_length = keys_to_remove.len();
@@ -726,7 +740,7 @@ pub struct NodeMut<'a, K, V> {
 ///
 /// Each variant of a [`Relationship`] is based off of familial relationships
 /// (i.e., parents, grandparent, great-grandparents are all your ancestors).
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Relationship<K> {
     /// The two keys are the exact same.
     Same,

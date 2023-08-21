@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 macro_rules! node {
     ($value:expr$(,)?) => { DeserialNode($value, vec![]) };
 
@@ -9,7 +11,10 @@ macro_rules! node {
     };
 }
 
-use std::collections::HashMap;
+use std::collections::{
+    HashMap,
+    HashSet,
+};
 
 pub(crate) use node;
 use pettree::Tree;
@@ -36,7 +41,10 @@ pub fn make_tree_and_key_map(
             Some(parent_key) => tree.insert(deserial_node.0, parent_key).unwrap(),
             None => tree.insert_root(deserial_node.0),
         };
-        key_map.insert(deserial_node.0, key);
+
+        let previous_key = key_map.insert(deserial_node.0, key);
+        assert!(previous_key.is_none());
+
         deserial_node
             .1
             .iter()
@@ -51,7 +59,11 @@ pub fn make_tree_and_key_map(
 }
 
 pub fn make_deserial_node(tree: &Tree<DefaultKey, Value>) -> Option<DeserialNode> {
-    fn make_deserial_node(tree: &Tree<DefaultKey, usize>, key: DefaultKey, depth: usize) -> DeserialNode {
+    fn make_deserial_node(
+        tree: &Tree<DefaultKey, usize>,
+        key: DefaultKey,
+        depth: usize,
+    ) -> DeserialNode {
         let node = tree.get(key).unwrap();
 
         assert_eq!(node.depth, depth);
@@ -68,4 +80,17 @@ pub fn make_deserial_node(tree: &Tree<DefaultKey, Value>) -> Option<DeserialNode
 
     tree.root_key()
         .map(|root_key| make_deserial_node(tree, root_key, 0))
+}
+
+pub fn make_reverse_key_map(key_map: &HashMap<Value, DefaultKey>) -> HashMap<DefaultKey, Value> {
+    let length = key_map.len();
+
+    let mut reverse_map = HashMap::with_capacity(length);
+
+    key_map.iter().for_each(|(&value, &default_key)| {
+        let previous_value = reverse_map.insert(default_key, value);
+        assert!(previous_value.is_none());
+    });
+
+    reverse_map
 }
