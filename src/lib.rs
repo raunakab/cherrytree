@@ -740,7 +740,7 @@ pub struct NodeMut<'a, K, V> {
 ///
 /// Each variant of a [`Relationship`] is based off of familial relationships
 /// (i.e., parents, grandparent, great-grandparents are all your ancestors).
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Relationship<K> {
     /// The two keys are the exact same.
     Same,
