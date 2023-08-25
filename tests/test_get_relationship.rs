@@ -34,35 +34,29 @@ fn test_get_relationship() {
         ),
         (
             (
-                Some(node! {
-                    0,
-                    [
-                        node! { 1 },
-                        node! { 4 },
-                    ],
-                }),
-                1,
-                4,
-            ),
-            Some(Relationship::Siblings {
-                common_ancestor_key: 0,
-            }),
+                Some(
+                    node! {
+                        0,
+                        [
+                            node! { 1 },
+                            node! { 4 },
+                        ],
+                    }
+                ), 1, 4),
+            Some(Relationship::Siblings { common_ancestor_key: 0 }),
         ),
         (
             (
-                Some(node! {
-                    0,
-                    [
-                        node! { 1 },
-                        node! { 4 },
-                    ],
-                }),
-                4,
-                1,
-            ),
-            Some(Relationship::Siblings {
-                common_ancestor_key: 0,
-            }),
+                Some(
+                    node! {
+                        0,
+                        [
+                            node! { 1 },
+                            node! { 4 },
+                        ],
+                    }
+                ), 4, 1),
+            Some(Relationship::Siblings { common_ancestor_key: 0 }),
         ),
     ];
 

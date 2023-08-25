@@ -140,7 +140,6 @@ where
             parent_key: None,
             child_keys: IndexSet::with_capacity(capacity),
             value,
-            depth: 0,
         });
         self.root_key = Some(root_key);
 
@@ -171,13 +170,10 @@ where
             // Potential source for optimization at a future point (although this would
             // likely require `unsafe`).
 
-            let parent_depth = self.inner_nodes.get(parent_key).unwrap().depth;
-
             let key = self.inner_nodes.insert(InnerNode {
                 parent_key: Some(parent_key),
                 child_keys: IndexSet::with_capacity(capacity),
                 value,
-                depth: parent_depth.checked_add(1).unwrap(),
             });
 
             self.inner_nodes
@@ -333,50 +329,15 @@ where
     /// If `key` was not found in this [`Tree`] instance, then `false` is
     /// returned and no updates to the [`Tree`] are made. Otherwise,
     /// performs the requested rebase and returns `true`.
-    pub fn rebase(&mut self, key: K, new_parent_key: K, size_hint: Option<usize>) -> bool {
-        /// Update the depth of the node corresponding to the given `key`, as
-        /// well as *ALL* of its descendents.
-        ///
-        /// The depth of each descendent will be updated appropriately based on
-        /// how many levels below the `key` that descendent-key is.
-        fn update_depths<K, V>(
-            tree: &mut Tree<K, V>,
-            key: K,
-            depth: usize,
-            size_hint: Option<usize>,
-        ) where
-            K: Key,
-        {
-            let size_hint = size_hint.unwrap_or_default();
-            let mut depths_and_keys_to_visit = Vec::with_capacity(size_hint);
-            depths_and_keys_to_visit.push((depth, key));
-
-            while let Some((depth, key_to_visit)) = depths_and_keys_to_visit.pop() {
-                let inner_node = tree.inner_nodes.get_mut(key_to_visit).unwrap();
-                inner_node.depth = depth;
-
-                let new_depth = depth.checked_add(1).unwrap();
-                let child_keys_to_visit = inner_node
-                    .child_keys
-                    .iter()
-                    .map(|&child_key_to_visit| (new_depth, child_key_to_visit));
-
-                depths_and_keys_to_visit.extend(child_keys_to_visit);
-            }
-        }
-
+    pub fn rebase(&mut self, key: K, new_parent_key: K) -> bool {
         /// Performs a generic rebase of the given `key` onto the given
         /// `new_parent_key`.
         ///
         /// This rebasing algorithm is very generic and should be used during
         /// the "happy" paths. (I.e., when the `new_parent_key` is *not*
         /// a descendent of `key`).
-        fn rebase_generic<K, V>(
-            tree: &mut Tree<K, V>,
-            key: K,
-            new_parent_key: K,
-            size_hint: Option<usize>,
-        ) where
+        fn rebase_generic<K, V>(tree: &mut Tree<K, V>, key: K, new_parent_key: K)
+        where
             K: Key,
         {
             let node = tree.inner_nodes.get_mut(key).unwrap();
@@ -387,17 +348,10 @@ where
                 node.parent_key = Some(new_parent_key);
 
                 let current_parent_node = tree.inner_nodes.get_mut(current_parent_key).unwrap();
-                let current_depth = current_parent_node.depth;
                 current_parent_node.child_keys.shift_remove(&key);
 
                 let new_parent_node = tree.inner_nodes.get_mut(new_parent_key).unwrap();
-                let new_parent_depth = new_parent_node.depth;
                 new_parent_node.child_keys.insert(key);
-
-                let new_depth = new_parent_depth.checked_add(1).unwrap();
-                if current_depth != new_depth {
-                    update_depths(tree, key, new_depth, size_hint);
-                };
             };
         }
 
@@ -410,24 +364,27 @@ where
         ///
         /// For example, you need to worry about if the given `key` is the
         /// root-key and how to deal with that specific edge-case.
-        fn rebase_onto_descendent<K, V>(_: &mut Tree<K, V>, _: K, _: K)
+        fn rebase_onto_descendent<K, V>(tree: &mut Tree<K, V>, key: K, new_parent_key: K)
         where
             K: Key,
         {
-            // let node = tree.inner_nodes.get_mut(key).unwrap();
-            // match node.parent_key {
-            //     Some(..) => todo!(),
-            //     None => {
-            //         node.parent_key = Some(parent_key);
-            //         let parent_node = tree.inner_nodes.get_mut(parent_key).unwrap();
-            //         parent_node.child_keys.insert(key);
-            //         let current_parent_key = parent_node.parent_key.unwrap();
-            //         parent_node.parent_key = None;
-            //         tree.inner_nodes.get_mut(current_parent_key).unwrap().child_keys.
-            // remove(&parent_key);     },
-            // }
+            let inner_node = tree.inner_nodes.get_mut(key).unwrap();
 
-            todo!()
+            match inner_node.parent_key {
+                Some(..) => {
+                    todo!()
+                },
+                None => {
+                    inner_node.parent_key = Some(new_parent_key);
+
+                    let new_parent_inner_node = tree.inner_nodes.get_mut(new_parent_key).unwrap();
+                    new_parent_inner_node.child_keys.insert(key);
+
+                    let parent_of_new_parent_key = new_parent_inner_node.parent_key.unwrap();
+                    new_parent_inner_node.parent_key = None;
+                    tree.inner_nodes.get_mut(parent_of_new_parent_key).unwrap().child_keys.remove(&new_parent_key);
+                },
+            }
         }
 
         /// Rebase `key` onto `parent_key` when their [`Relationship`] has been
@@ -437,7 +394,6 @@ where
             relationship: Relationship<K>,
             key: K,
             new_parent_key: K,
-            size_hint: Option<usize>,
         ) where
             K: Key,
         {
@@ -445,7 +401,7 @@ where
                 Relationship::Same => (),
 
                 Relationship::Ancestral { ancestor_key, .. } if new_parent_key == ancestor_key => {
-                    rebase_generic(tree, key, new_parent_key, size_hint)
+                    rebase_generic(tree, key, new_parent_key)
                 }
                 Relationship::Ancestral { descendent_key, .. }
                     if new_parent_key == descendent_key =>
@@ -454,15 +410,13 @@ where
                 }
                 Relationship::Ancestral { .. } => unreachable!(),
 
-                Relationship::Siblings { .. } => {
-                    rebase_generic(tree, key, new_parent_key, size_hint)
-                }
+                Relationship::Siblings { .. } => rebase_generic(tree, key, new_parent_key),
             };
         }
 
         self.get_relationship(key, new_parent_key)
             .map(|relationship| {
-                rebase(self, relationship, key, new_parent_key, size_hint);
+                rebase(self, relationship, key, new_parent_key);
             })
             .is_some()
     }
@@ -500,7 +454,6 @@ where
             parent_key: inner_node.parent_key,
             child_keys: &inner_node.child_keys,
             value: &inner_node.value,
-            depth: inner_node.depth,
         })
     }
 
@@ -515,7 +468,6 @@ where
             parent_key: inner_node.parent_key,
             child_keys: &inner_node.child_keys,
             value: &mut inner_node.value,
-            depth: inner_node.depth,
         })
     }
 
@@ -603,7 +555,6 @@ where
             parent_key: inner_node.parent_key,
             child_keys: &inner_node.child_keys,
             value: &inner_node.value,
-            depth: inner_node.depth,
         })
     }
 
@@ -614,7 +565,6 @@ where
             parent_key: inner_node.parent_key,
             child_keys: &inner_node.child_keys,
             value: &mut inner_node.value,
-            depth: inner_node.depth,
         })
     }
 
@@ -631,7 +581,6 @@ where
                     parent_key: inner_node.parent_key,
                     child_keys: &inner_node.child_keys,
                     value: &inner_node.value,
-                    depth: inner_node.depth,
                 },
             )
         })
@@ -654,7 +603,6 @@ where
                     parent_key: inner_node.parent_key,
                     child_keys: &inner_node.child_keys,
                     value: &mut inner_node.value,
-                    depth: inner_node.depth,
                 },
             )
         })
@@ -689,11 +637,6 @@ struct InnerNode<K, V> {
 
     /// The actual underlying value that is stored.
     value: V,
-
-    /// The depth that this [`InnerNode`] sits at.
-    ///
-    /// Here, depth starts at `0` which represents the root.
-    depth: usize,
 }
 
 /// An immutable container over the underlying value inside of this [`Tree`]
@@ -709,11 +652,6 @@ pub struct Node<'a, K, V> {
 
     /// An immutable reference to the underlying value that is stored.
     pub value: &'a V,
-
-    /// The depth that this [`Node`] sits at.
-    ///
-    /// Here, depth starts at `0` which represents the root.
-    pub depth: usize,
 }
 
 /// A mutable container over the underlying value inside of this [`Tree`]
@@ -729,11 +667,6 @@ pub struct NodeMut<'a, K, V> {
 
     /// A mutable reference to the underlying value that is stored.
     pub value: &'a mut V,
-
-    /// The depth that this [`NodeMut`] sits at.
-    ///
-    /// Here, depth starts at `0` which represents the root.
-    pub depth: usize,
 }
 
 /// A description of the relationship between two keys in a [`Tree`] instance.
