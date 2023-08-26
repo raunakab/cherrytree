@@ -1,9 +1,9 @@
 [package]
-name = "pettree"
+name = "cherrytree"
 version = "0.1.0"
 edition = "2021"
 description = "A small, simple, and correct tree implementation."
-repository = "https://github.com/raunakab/pettree"
+repository = "https://github.com/raunakab/cherrytree"
 license-file = "LICENSE-BSD-3-CLAUSE"
 
 [dependencies]
