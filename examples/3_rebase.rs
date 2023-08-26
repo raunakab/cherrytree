@@ -48,5 +48,5 @@ fn main() {
     tree.insert(6, child_key_2).unwrap();
     tree.insert(7, child_key_2).unwrap();
 
-    assert!(tree.rebase(child_key_4, child_key_2, None));
+    assert!(tree.rebase(child_key_4, child_key_2));
 }
