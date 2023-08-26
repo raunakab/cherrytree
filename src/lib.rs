@@ -377,14 +377,12 @@ where
                     let alpha_key = new_parent_key;
                     let alpha_parent_key = tree.inner_nodes.get(alpha_key).unwrap().parent_key.unwrap();
 
-                    tree.inner_nodes.get_mut(beta_key).unwrap().parent_key = None;
+                    tree.inner_nodes.get_mut(beta_key).unwrap().parent_key = Some(alpha_key);
                     tree.inner_nodes.get_mut(beta_parent_key).unwrap().child_keys.remove(&beta_key);
 
-                    tree.inner_nodes.get_mut(alpha_key).unwrap().parent_key = None;
+                    tree.inner_nodes.get_mut(alpha_key).unwrap().parent_key = Some(beta_parent_key);
                     tree.inner_nodes.get_mut(alpha_parent_key).unwrap().child_keys.remove(&alpha_key);
 
-                    tree.inner_nodes.get_mut(beta_key).unwrap().parent_key = Some(alpha_key);
-                    tree.inner_nodes.get_mut(alpha_key).unwrap().parent_key = Some(beta_parent_key);
                     tree.inner_nodes.get_mut(beta_parent_key).unwrap().child_keys.insert(alpha_key);
                     tree.inner_nodes.get_mut(alpha_key).unwrap().child_keys.insert(beta_key);
 
@@ -404,13 +402,11 @@ where
                     let alpha_key = new_parent_key;
                     let alpha_parent_key = tree.inner_nodes.get(alpha_key).unwrap().parent_key.unwrap();
 
-                    tree.inner_nodes.get_mut(beta_key).unwrap().parent_key = None;
+                    tree.inner_nodes.get_mut(beta_key).unwrap().parent_key = Some(alpha_key);
 
                     tree.inner_nodes.get_mut(alpha_key).unwrap().parent_key = None;
                     tree.inner_nodes.get_mut(alpha_parent_key).unwrap().child_keys.remove(&alpha_key);
 
-                    tree.inner_nodes.get_mut(beta_key).unwrap().parent_key = Some(alpha_key);
-                    tree.inner_nodes.get_mut(alpha_key).unwrap().parent_key = None;
                     tree.inner_nodes.get_mut(alpha_key).unwrap().child_keys.insert(beta_key);
 
                     tree.root_key = Some(new_parent_key);
