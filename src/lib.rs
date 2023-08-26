@@ -375,27 +375,20 @@ where
                     let beta_key = key;
                     let beta_parent_key = parent_key;
                     let alpha_key = new_parent_key;
-                    let alpha_parent_key = tree.inner_nodes.get(alpha_key).unwrap().parent_key.unwrap();
 
-                    tree.inner_nodes.get_mut(beta_key).unwrap().parent_key = Some(alpha_key);
-                    tree.inner_nodes.get_mut(beta_parent_key).unwrap().child_keys.remove(&beta_key);
+                    inner_node.parent_key = Some(alpha_key);
 
-                    tree.inner_nodes.get_mut(alpha_key).unwrap().parent_key = Some(beta_parent_key);
+                    let alpha_node = tree.inner_nodes.get_mut(alpha_key).unwrap();
+                    let alpha_parent_key = alpha_node.parent_key.unwrap();
+
+                    alpha_node.parent_key = Some(beta_parent_key);
+                    alpha_node.child_keys.insert(beta_key);
+
+                    let beta_parent_node = tree.inner_nodes.get_mut(beta_parent_key).unwrap();
+                    beta_parent_node.child_keys.remove(&beta_key);
+                    beta_parent_node.child_keys.insert(alpha_key);
+
                     tree.inner_nodes.get_mut(alpha_parent_key).unwrap().child_keys.remove(&alpha_key);
-
-                    tree.inner_nodes.get_mut(beta_parent_key).unwrap().child_keys.insert(alpha_key);
-                    tree.inner_nodes.get_mut(alpha_key).unwrap().child_keys.insert(beta_key);
-
-                    // inner_node.parent_key = Some(new_parent_key);
-                    // let key_parent_node = tree.inner_nodes.get_mut(parent_key).unwrap();
-                    // key_parent_node.child_keys.remove(&key);
-                    // key_parent_node.child_keys.insert(new_parent_key);
-                    // let new_parent_node = tree.inner_nodes.get_mut(new_parent_key).unwrap();
-                    // new_parent_node.child_keys.insert(key);
-                    // let new_parent_key_parent_key = new_parent_node.parent_key.unwrap();
-                    // new_parent_node.parent_key = Some(parent_key);
-                    // let new_parent_key_parent_node = tree.inner_nodes.get_mut(new_parent_key_parent_key).unwrap();
-                    // new_parent_key_parent_node.child_keys.remove(&parent_key);
                 },
                 None => {
                     let beta_key = key;
