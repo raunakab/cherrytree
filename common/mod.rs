@@ -59,7 +59,11 @@ pub fn make_tree_and_key_map(
 }
 
 pub fn make_deserial_node(tree: &Tree<DefaultKey, Value>) -> Option<DeserialNode> {
-    fn make_deserial_node(tree: &Tree<DefaultKey, usize>, key: DefaultKey, parent_key: Option<DefaultKey>) -> DeserialNode {
+    fn make_deserial_node(
+        tree: &Tree<DefaultKey, usize>,
+        key: DefaultKey,
+        parent_key: Option<DefaultKey>,
+    ) -> DeserialNode {
         let node = tree.get(key).unwrap();
 
         assert_eq!(node.parent_key, parent_key);

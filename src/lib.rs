@@ -388,8 +388,12 @@ where
                     beta_parent_node.child_keys.remove(&beta_key);
                     beta_parent_node.child_keys.insert(alpha_key);
 
-                    tree.inner_nodes.get_mut(alpha_parent_key).unwrap().child_keys.remove(&alpha_key);
-                },
+                    tree.inner_nodes
+                        .get_mut(alpha_parent_key)
+                        .unwrap()
+                        .child_keys
+                        .remove(&alpha_key);
+                }
                 None => {
                     let beta_key = key;
                     let alpha_key = new_parent_key;
@@ -402,10 +406,14 @@ where
                     alpha_node.parent_key = None;
                     alpha_node.child_keys.insert(beta_key);
 
-                    tree.inner_nodes.get_mut(alpha_parent_key).unwrap().child_keys.remove(&alpha_key);
+                    tree.inner_nodes
+                        .get_mut(alpha_parent_key)
+                        .unwrap()
+                        .child_keys
+                        .remove(&alpha_key);
 
                     tree.root_key = Some(alpha_key);
-                },
+                }
             }
         }
 

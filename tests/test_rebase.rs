@@ -29,8 +29,8 @@ fn test_rebase() {
             (Some(node! { 2, [ node! { 0, [ node! { 1 } ] } ] }), true),
         ),
         (
-            (Some(
-                node! {
+            (
+                Some(node! {
                     0,
                     [
                         node! { 10 },
@@ -38,10 +38,12 @@ fn test_rebase() {
                         node! { 12, [ node! { 20 }, node! { 21 } ] },
                         node! { 13 },
                     ]
-                }
-            ), 0, 21),
-            (Some(
-                node! {
+                }),
+                0,
+                21,
+            ),
+            (
+                Some(node! {
                     21,
                     [
                         node! {
@@ -54,12 +56,13 @@ fn test_rebase() {
                             ]
                         }
                     ]
-                }
-            ), true),
+                }),
+                true,
+            ),
         ),
         (
-            (Some(
-                node! {
+            (
+                Some(node! {
                     0,
                     [
                         node! { 10 },
@@ -67,10 +70,12 @@ fn test_rebase() {
                         node! { 12, [ node! { 20 }, node! { 21 } ] },
                         node! { 13 },
                     ]
-                }
-            ), 12, 21),
-            (Some(
-                node! {
+                }),
+                12,
+                21,
+            ),
+            (
+                Some(node! {
                     0,
                     [
                         node! { 10 },
@@ -80,8 +85,9 @@ fn test_rebase() {
                             node! { 12, [ node! { 20 } ] }
                         ] }
                     ]
-                }
-            ), true),
+                }),
+                true,
+            ),
         ),
     ];
 
