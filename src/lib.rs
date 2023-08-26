@@ -393,23 +393,18 @@ where
                 None => {
                     let beta_key = key;
                     let alpha_key = new_parent_key;
-                    let alpha_parent_key = tree.inner_nodes.get(alpha_key).unwrap().parent_key.unwrap();
 
-                    tree.inner_nodes.get_mut(beta_key).unwrap().parent_key = Some(alpha_key);
+                    inner_node.parent_key = Some(alpha_key);
 
-                    tree.inner_nodes.get_mut(alpha_key).unwrap().parent_key = None;
+                    let alpha_node = tree.inner_nodes.get_mut(alpha_key).unwrap();
+                    let alpha_parent_key = alpha_node.parent_key.unwrap();
+
+                    alpha_node.parent_key = None;
+                    alpha_node.child_keys.insert(beta_key);
+
                     tree.inner_nodes.get_mut(alpha_parent_key).unwrap().child_keys.remove(&alpha_key);
 
-                    tree.inner_nodes.get_mut(alpha_key).unwrap().child_keys.insert(beta_key);
-
-                    tree.root_key = Some(new_parent_key);
-
-                    // inner_node.parent_key = Some(new_parent_key);
-                    // let new_parent_inner_node = tree.inner_nodes.get_mut(new_parent_key).unwrap();
-                    // new_parent_inner_node.child_keys.insert(key);
-                    // let new_parent_key_parent_node = new_parent_inner_node.parent_key.unwrap();
-                    // new_parent_inner_node.parent_key = None;
-                    // tree.inner_nodes.get_mut(new_parent_key_parent_node).unwrap().child_keys.remove(&new_parent_key);
+                    tree.root_key = Some(alpha_key);
                 },
             }
         }
