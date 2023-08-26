@@ -1,4 +1,4 @@
-# `pettree`
+# `cherrytree`
 A small, simple, and correct tree implementation.
 
 ## License

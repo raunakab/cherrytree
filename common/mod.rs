@@ -17,7 +17,7 @@ use std::collections::{
 };
 
 pub(crate) use node;
-use pettree::Tree;
+use cherrytree::Tree;
 use slotmap::DefaultKey;
 
 pub type Value = usize;

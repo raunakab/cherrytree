@@ -7,7 +7,7 @@ use common::{
     node,
     DeserialNode,
 };
-use pettree::Relationship;
+use cherrytree::Relationship;
 
 #[test]
 fn test_get_relationship() {

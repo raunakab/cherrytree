@@ -3,7 +3,7 @@
 //! A small, simple, and correct tree implementation.
 //!
 //! # Overview:
-//! `pettree` is a library which exports safe and correct APIs for interacting
+//! `cherrytree` is a library which exports safe and correct APIs for interacting
 //! with tree data structures. The main way it does this is by exporting a
 //! generic [`Tree`] type with associated methods to read and write to it.
 //! ...But what exactly is a tree?
@@ -30,7 +30,7 @@
 //! # Example:
 //! ```
 //! # fn main() {
-//! use pettree::{
+//! use cherrytree::{
 //!     Node,
 //!     Tree,
 //! };

@@ -3,7 +3,7 @@
 //! children values will be *direct* children of the root value.
 
 use indexmap::IndexSet;
-use pettree::Tree;
+use cherrytree::Tree;
 use slotmap::DefaultKey;
 
 fn main() {
