@@ -1,13 +1,13 @@
 #[path = "../common/mod.rs"]
 mod common;
 
+use cherrytree::Relationship;
 use common::{
     make_reverse_key_map,
     make_tree_and_key_map,
     node,
     DeserialNode,
 };
-use cherrytree::Relationship;
 
 #[test]
 fn test_get_relationship() {
