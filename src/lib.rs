@@ -3,10 +3,10 @@
 //! A small, simple, and correct tree implementation.
 //!
 //! # Overview:
-//! `cherrytree` is a library which exports safe and correct APIs for interacting
-//! with tree data structures. The main way it does this is by exporting a
-//! generic [`Tree`] type with associated methods to read and write to it.
-//! ...But what exactly is a tree?
+//! `cherrytree` is a library which exports safe and correct APIs for
+//! interacting with tree data structures. The main way it does this is by
+//! exporting a generic [`Tree`] type with associated methods to read and write
+//! to it. ...But what exactly is a tree?
 //!
 //! ## Theory:
 //! Formally, a [tree](https://en.wikipedia.org/wiki/Tree_(data_structure)) is
@@ -499,6 +499,21 @@ where
             child_keys: &inner_node.child_keys,
             value: &mut inner_node.value,
         })
+    }
+
+    /// Update the currently stored value at the given `key` with the
+    /// `new_value` for this [`Tree`] instance.
+    ///
+    /// If the given `key` does not exist in this [`Tree`], then `false` is
+    /// returned. Otherwise, the appropriate value is updated with `new_value`
+    /// and `true` is returned.
+    pub fn set(&mut self, key: K, new_value: V) -> bool {
+        self.inner_nodes
+            .get_mut(key)
+            .map(|inner_node| {
+                inner_node.value = new_value;
+            })
+            .is_some()
     }
 
     /// Gets the [`Relationship`] status between two keys.
