@@ -473,6 +473,40 @@ where
         self.root_key
     }
 
+    /// Returns the `root_key` of this [`Tree`] instance, as well as its corresponding [`Node`], as a 2-tuple.
+    ///
+    /// Returns [`None`] if this [`Tree`] instance is empty. Otherwise, returns
+    /// [`Some(..)`] containing appropriate values.
+    pub fn root_key_value(&self) -> Option<(K, Node<'_, K, V>)> {
+        self.root_key.map(|root_key| {
+            let root_inner_node = self.inner_nodes.get(root_key).unwrap();
+            let root_node = Node {
+                parent_key: root_inner_node.parent_key,
+                value: &root_inner_node.value,
+                child_keys: &root_inner_node.child_keys,
+            };
+
+            (root_key, root_node)
+        })
+    }
+
+    /// Returns the `root_key` of this [`Tree`] instance, as well as its corresponding [`NodeMut`], as a 2-tuple.
+    ///
+    /// Returns [`None`] if this [`Tree`] instance is empty. Otherwise, returns
+    /// [`Some(..)`] containing appropriate values.
+    pub fn root_key_value_mut(&mut self) -> Option<(K, NodeMut<'_, K, V>)> {
+        self.root_key.map(|root_key| {
+            let root_inner_node = self.inner_nodes.get_mut(root_key).unwrap();
+            let root_node = NodeMut {
+                parent_key: root_inner_node.parent_key,
+                value: &mut root_inner_node.value,
+                child_keys: &root_inner_node.child_keys,
+            };
+
+            (root_key, root_node)
+        })
+    }
+
     /// Returns a [`Node`] which corresponds to the given `key` inside of this
     /// [`Tree`] instance.
     ///
