@@ -2,8 +2,8 @@
 //! insert a root value and 3 children values into it. In this example, the
 //! children values will be *direct* children of the root value.
 
-use indexmap::IndexSet;
 use cherrytree::Tree;
+use indexmap::IndexSet;
 use slotmap::DefaultKey;
 
 fn main() {

@@ -16,8 +16,8 @@ use std::collections::{
     HashSet,
 };
 
-pub(crate) use node;
 use cherrytree::Tree;
+pub(crate) use node;
 use slotmap::DefaultKey;
 
 pub type Value = usize;
