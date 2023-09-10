@@ -1,9 +1,8 @@
-# cargo artefacts
-Cargo.lock
+# cargo
 target
 
-# vscode artefacts
+# vscode
 .vscode
 
-# macos artefacts
+# macos
 .DS_Store
