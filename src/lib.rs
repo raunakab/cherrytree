@@ -59,6 +59,8 @@
 //! # }
 //! ```
 
+use std::mem::replace;
+
 use indexmap::IndexSet;
 use slotmap::{
     Key,
@@ -538,16 +540,13 @@ where
     /// Update the currently stored value at the given `key` with the
     /// `new_value` for this [`Tree`] instance.
     ///
-    /// If the given `key` does not exist in this [`Tree`], then `false` is
-    /// returned. Otherwise, the appropriate value is updated with `new_value`
-    /// and `true` is returned.
-    pub fn set(&mut self, key: K, new_value: V) -> bool {
+    /// If the given `key` does not exist in this [`Tree`] instance, then
+    /// [`None`] is returned. Otherwise, returns [`Some(..)`] containing the
+    /// old value.
+    pub fn set(&mut self, key: K, new_value: V) -> Option<V> {
         self.inner_nodes
             .get_mut(key)
-            .map(|inner_node| {
-                inner_node.value = new_value;
-            })
-            .is_some()
+            .map(|inner_node| replace(&mut inner_node.value, new_value))
     }
 
     /// Gets the [`Relationship`] status between two keys.
