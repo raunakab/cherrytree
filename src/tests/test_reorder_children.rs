@@ -1,11 +1,7 @@
-#[path = "../common/mod.rs"]
-mod common;
-
-use common::{
-    make_deserial_node,
+use crate::decl_tree::{
+    make_decl_tree,
     make_tree_and_key_map,
     node,
-    DeserialNode,
 };
 
 #[test]
@@ -97,12 +93,10 @@ fn test_reorder_children() {
         ),
     ];
 
-    for (
-        (deserial_node, key, reordered_child_keys),
-        (expected_deserial_node, expected_did_reorder),
-    ) in tests
+    for ((decl_tree, key, reordered_child_keys), (expected_decl_tree, expected_did_reorder)) in
+        tests
     {
-        let (mut tree, key_map) = make_tree_and_key_map(deserial_node.as_ref());
+        let (mut tree, key_map) = make_tree_and_key_map(decl_tree.as_ref());
 
         let key = key_map.get(&key).copied().unwrap_or_default();
         let actual_did_reorder = tree.reorder_children(key, |_| {
@@ -111,9 +105,9 @@ fn test_reorder_children() {
                 .map(|child_key| key_map.get(&child_key).copied().unwrap_or_default())
                 .collect()
         });
-        let actual_deserial_node = make_deserial_node(&tree);
+        let actual_decl_tree = make_decl_tree(&tree);
 
-        assert_eq!(actual_deserial_node, expected_deserial_node);
+        assert_eq!(actual_decl_tree, expected_decl_tree);
         assert_eq!(actual_did_reorder, expected_did_reorder);
     }
 }

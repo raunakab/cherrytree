@@ -1,11 +1,7 @@
-#[path = "../common/mod.rs"]
-mod common;
-
-use common::{
-    make_deserial_node,
+use crate::decl_tree::{
+    make_decl_tree,
     make_tree_and_key_map,
     node,
-    DeserialNode,
 };
 
 #[test]
@@ -82,14 +78,14 @@ fn test_remove() {
         ),
     ];
 
-    for ((deserial_node, key), (expected_deserial_node, expected_removed_value)) in tests {
-        let (mut tree, key_map) = make_tree_and_key_map(deserial_node.as_ref());
+    for ((decl_tree, key), (expected_decl_tree, expected_removed_value)) in tests {
+        let (mut tree, key_map) = make_tree_and_key_map(decl_tree.as_ref());
 
         let key = key_map.get(&key).copied().unwrap_or_default();
         let actual_removed_value = tree.remove(key, None);
-        let actual_deserial_node = make_deserial_node(&tree);
+        let actual_decl_tree = make_decl_tree(&tree);
 
-        assert_eq!(actual_deserial_node, expected_deserial_node);
+        assert_eq!(actual_decl_tree, expected_decl_tree);
         assert_eq!(actual_removed_value, expected_removed_value);
     }
 }

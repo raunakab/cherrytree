@@ -1,12 +1,10 @@
-#[path = "../common/mod.rs"]
-mod common;
-
-use cherrytree::Relationship;
-use common::{
-    make_reverse_key_map,
-    make_tree_and_key_map,
-    node,
-    DeserialNode,
+use crate::{
+    decl_tree::{
+        make_reverse_key_map,
+        make_tree_and_key_map,
+        node,
+    },
+    Relationship,
 };
 
 #[test]
@@ -66,8 +64,8 @@ fn test_get_relationship() {
         ),
     ];
 
-    for ((deserial_node, key_1, key_2), expected_relationship) in tests {
-        let (tree, key_map) = make_tree_and_key_map(deserial_node.as_ref());
+    for ((decl_tree, key_1, key_2), expected_relationship) in tests {
+        let (tree, key_map) = make_tree_and_key_map(decl_tree.as_ref());
 
         let key_1 = key_map.get(&key_1).copied().unwrap_or_default();
         let key_2 = key_map.get(&key_2).copied().unwrap_or_default();

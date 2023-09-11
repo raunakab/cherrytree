@@ -1,11 +1,7 @@
-#[path = "../common/mod.rs"]
-mod common;
-
-use common::{
-    make_deserial_node,
+use crate::decl_tree::{
+    make_decl_tree,
     make_tree_and_key_map,
     node,
-    DeserialNode,
 };
 
 #[test]
@@ -44,12 +40,10 @@ fn test_insert() {
         ),
     ];
 
-    for (
-        (deserial_node, parent_key, value_to_insert),
-        (expected_deserial_node, expected_did_insert),
-    ) in tests
+    for ((decl_tree, parent_key, value_to_insert), (expected_decl_tree, expected_did_insert)) in
+        tests
     {
-        let (mut tree, mut key_map) = make_tree_and_key_map(deserial_node.as_ref());
+        let (mut tree, mut key_map) = make_tree_and_key_map(decl_tree.as_ref());
 
         let parent_key = key_map.get(&parent_key).copied().unwrap_or_default();
         let key = tree.insert(value_to_insert, parent_key);
@@ -58,10 +52,10 @@ fn test_insert() {
             key_map.insert(value_to_insert, key);
         };
 
-        let actual_deserial_node = make_deserial_node(&tree);
+        let actual_decl_tree = make_decl_tree(&tree);
         let actual_did_insert = key.is_some();
 
-        assert_eq!(actual_deserial_node, expected_deserial_node);
+        assert_eq!(actual_decl_tree, expected_decl_tree);
         assert_eq!(actual_did_insert, expected_did_insert);
     }
 }
