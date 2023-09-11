@@ -476,7 +476,8 @@ where
         self.root_key
     }
 
-    /// Returns the `root_key` of this [`Tree`] instance, as well as its corresponding [`Node`], as a 2-tuple.
+    /// Returns the `root_key` of this [`Tree`] instance, as well as its
+    /// corresponding [`Node`], as a 2-tuple.
     ///
     /// Returns [`None`] if this [`Tree`] instance is empty. Otherwise, returns
     /// [`Some(..)`] containing appropriate values.
@@ -493,7 +494,8 @@ where
         })
     }
 
-    /// Returns the `root_key` of this [`Tree`] instance, as well as its corresponding [`NodeMut`], as a 2-tuple.
+    /// Returns the `root_key` of this [`Tree`] instance, as well as its
+    /// corresponding [`NodeMut`], as a 2-tuple.
     ///
     /// Returns [`None`] if this [`Tree`] instance is empty. Otherwise, returns
     /// [`Some(..)`] containing appropriate values.
