@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 #[cfg(test)]
 mod test_get_relationship;
 
@@ -17,4 +19,4 @@ mod test_remove;
 mod test_reorder_children;
 
 #[cfg(any(test, feature = "decl_tree"))]
-mod utils;
+pub mod utils;

@@ -1,5 +1,3 @@
-#![allow(missing_docs)]
-
 #[macro_export]
 macro_rules! node {
     ($value:expr$(,)?) => {{

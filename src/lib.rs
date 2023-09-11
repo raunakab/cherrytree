@@ -60,7 +60,7 @@
 //! ```
 
 #[cfg(any(test, feature = "decl_tree"))]
-mod tests;
+pub mod tests;
 
 use std::mem::replace;
 
