@@ -3,7 +3,7 @@
 #[macro_export]
 macro_rules! node {
     ($value:expr$(,)?) => {{
-        use crate::decl_tree::DeclTree;
+        use crate::tests::utils::DeclTree;
         DeclTree { value: $value, child_keys: vec![] }
     }};
 
@@ -11,7 +11,7 @@ macro_rules! node {
         $value:expr,
         [$($child:expr),*$(,)?]$(,)?
     ) => {{
-        use crate::decl_tree::DeclTree;
+        use crate::tests::utils::DeclTree;
         DeclTree { value: $value, child_keys: vec![$($child),*] }
     }};
 }

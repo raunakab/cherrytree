@@ -59,11 +59,8 @@
 //! # }
 //! ```
 
-#[cfg(test)]
-mod tests;
-
 #[cfg(any(test, feature = "decl_tree"))]
-pub mod decl_tree;
+mod tests;
 
 use std::mem::replace;
 

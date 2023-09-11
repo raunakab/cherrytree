@@ -1,4 +1,4 @@
-use crate::decl_tree::{
+use crate::tests::utils::{
     make_decl_tree,
     make_tree_and_key_map,
     node,
