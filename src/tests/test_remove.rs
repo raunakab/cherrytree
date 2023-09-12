@@ -1,91 +1,105 @@
 use crate::tests::utils::{
-    make_decl_tree,
-    make_tree_and_key_map,
     node,
+    DeclarativeTree,
 };
 
 #[test]
-fn test_remove() {
-    let tests = [
-        // Test remove from empty
-        ((None, 0), (None, None)),
-        // Test remove root-node in a single root-tree
-        ((Some(node! { 0 }), 0), (None, Some(0))),
-        // Test remove non-existent node
-        ((Some(node! { 0 }), 1), (Some(node! { 0 }), None)),
-        // Test remove root-node in a multi-node-tree
-        (
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 1 },
-                        node! { 2 },
-                        node! { 3 },
-                    ],
-                }),
-                0,
-            ),
-            (None, Some(0)),
-        ),
-        // Test remove child-node in a multi-node-tree
-        (
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 1 },
-                        node! { 2 },
-                        node! { 3 },
-                    ],
-                }),
-                1,
-            ),
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 2 },
-                        node! { 3 },
-                    ],
-                }),
-                Some(1),
-            ),
-        ),
-        // Test remove child-node with its own children in a multi-node-tree
-        (
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 1, [node!{ 10 }, node!{ 11 }] },
-                        node! { 2, [node!{ 12 }, node!{ 13 }] },
-                        node! { 3 },
-                    ],
-                }),
-                1,
-            ),
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 2, [node!{ 12 }, node!{ 13 }] },
-                        node! { 3 },
-                    ],
-                }),
-                Some(1),
-            ),
-        ),
-    ];
+fn test_remove_from_empty_tree() {
+    let mut declarative_tree = DeclarativeTree::<_, char>::from_declarative_node(None);
 
-    for ((decl_tree, key), (expected_decl_tree, expected_removed_value)) in tests {
-        let (mut tree, key_map) = make_tree_and_key_map(decl_tree.as_ref());
+    assert!(declarative_tree.remove(0).is_none());
 
-        let key = key_map.get(&key).copied().unwrap_or_default();
-        let actual_removed_value = tree.remove(key, None);
-        let actual_decl_tree = make_decl_tree(&tree);
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = None;
 
-        assert_eq!(actual_decl_tree, expected_decl_tree);
-        assert_eq!(actual_removed_value, expected_removed_value);
-    }
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_remove_a_non_existent_key() {
+    let mut declarative_tree =
+        DeclarativeTree::<_, char>::from_declarative_node(Some(&node! { 0, 'a', [] }));
+
+    assert!(declarative_tree.remove(100).is_none());
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_remove_root_in_a_single_element_tree() {
+    let mut declarative_tree =
+        DeclarativeTree::<_, char>::from_declarative_node(Some(&node! { 0, 'a', [] }));
+
+    assert_eq!(declarative_tree.remove(0), Some('a'));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = None;
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_remove_root_in_a_multi_element_tree() {
+    let mut declarative_tree =
+        DeclarativeTree::<_, char>::from_declarative_node(Some(&node! { 0, 'a', [
+            node! { 1, 'b', [
+                node! { 2, 'c', [] }
+            ] },
+            node! { 3, 'd', [] },
+        ] }));
+
+    assert_eq!(declarative_tree.remove(0), Some('a'));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = None;
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_remove_node_with_no_children() {
+    let mut declarative_tree =
+        DeclarativeTree::<_, char>::from_declarative_node(Some(&node! { 0, 'a', [
+            node! { 1, 'b', [] },
+            node! { 2, 'c', [
+                node! { 3, 'd', [] }
+            ] },
+            node! { 4, 'e', [] },
+        ] }));
+
+    assert_eq!(declarative_tree.remove(3), Some('d'));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 1, 'b', [] },
+        node! { 2, 'c', [] },
+        node! { 4, 'e', [] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_remove_node_with_children() {
+    let mut declarative_tree =
+        DeclarativeTree::<_, char>::from_declarative_node(Some(&node! { 0, 'a', [
+            node! { 1, 'b', [] },
+            node! { 2, 'c', [
+                node! { 3, 'd', [] }
+            ] },
+            node! { 4, 'e', [] },
+        ] }));
+
+    assert_eq!(declarative_tree.remove(2), Some('c'));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 1, 'b', [] },
+        node! { 4, 'e', [] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
 }

@@ -1,61 +1,83 @@
 use crate::tests::utils::{
-    make_decl_tree,
-    make_tree_and_key_map,
     node,
+    DeclarativeTree,
 };
 
 #[test]
-fn test_insert() {
-    let tests = [
-        ((None, 0, 1), (None, false)),
-        ((Some(node! { 0 }), 2, 1), (Some(node! { 0 }), false)),
-        (
-            (Some(node! { 0 }), 0, 1),
-            (Some(node! { 0, [node! { 1 }] }), true),
-        ),
-        (
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 1 },
-                        node! { 2, [node! { 4, [node! { 5 }] }] },
-                        node! { 3 },
-                    ],
-                }),
-                2,
-                6,
-            ),
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 1 },
-                        node! { 2, [node! { 4, [node! { 5 }] }, node! { 6 }] },
-                        node! { 3 },
-                    ],
-                }),
-                true,
-            ),
-        ),
-    ];
+fn test_insert_into_empty_tree_with_a_non_existent_parent_key() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(None);
 
-    for ((decl_tree, parent_key, value_to_insert), (expected_decl_tree, expected_did_insert)) in
-        tests
-    {
-        let (mut tree, mut key_map) = make_tree_and_key_map(decl_tree.as_ref());
+    assert!(!declarative_tree.insert(1, 'a', 0));
 
-        let parent_key = key_map.get(&parent_key).copied().unwrap_or_default();
-        let key = tree.insert(value_to_insert, parent_key);
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = None;
 
-        if let Some(key) = key {
-            key_map.insert(value_to_insert, key);
-        };
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
 
-        let actual_decl_tree = make_decl_tree(&tree);
-        let actual_did_insert = key.is_some();
+#[test]
+fn test_insert_into_single_element_tree_with_a_non_existent_parent_key() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [] }));
 
-        assert_eq!(actual_decl_tree, expected_decl_tree);
-        assert_eq!(actual_did_insert, expected_did_insert);
-    }
+    assert!(!declarative_tree.insert(1, 'b', 100));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_insert_into_single_element_tree() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [] }));
+
+    assert!(declarative_tree.insert(1, 'b', 0));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 1, 'b', [] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_insert_into_multi_element_as_a_child() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [] },
+    ] }));
+
+    assert!(declarative_tree.insert(2, 'c', 1));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 2, 'c', [] },
+        ] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_insert_into_multi_element_as_a_sibling() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 2, 'c', [] },
+            node! { 3, 'd', [] },
+        ] },
+    ] }));
+
+    assert!(declarative_tree.insert(4, 'e', 0));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 2, 'c', [] },
+            node! { 3, 'd', [] },
+        ] },
+        node! { 4, 'e', [] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
 }

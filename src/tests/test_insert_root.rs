@@ -1,29 +1,48 @@
 use crate::tests::utils::{
-    make_decl_tree,
-    make_tree_and_key_map,
     node,
+    DeclarativeTree,
 };
 
 #[test]
-fn test_insert_root() {
-    let tests = [
-        ((None, 0), Some(node! { 0 })),
-        ((Some(node! { 1 }), 0), Some(node! { 0 })),
-        (
-            (
-                Some(node! { 1, [node! { 2, [node! { 4 }] }, node! { 3 }] }),
-                0,
-            ),
-            Some(node! { 0 }),
-        ),
-    ];
+fn test_insert_root_into_empty_tree() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(None);
 
-    for ((decl_tree, value_to_insert), expected_decl_tree) in tests {
-        let (mut tree, _) = make_tree_and_key_map(decl_tree.as_ref());
+    declarative_tree.insert_root(0, 'a');
 
-        let _ = tree.insert_root(value_to_insert);
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [] });
 
-        let actual_decl_tree = make_decl_tree(&tree);
-        assert_eq!(actual_decl_tree, expected_decl_tree);
-    }
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_insert_root_into_single_element_tree() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [] }));
+
+    declarative_tree.insert_root(1, 'b');
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 1, 'b', [] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_insert_root_into_multi_element_tree() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 10, 'b', [] },
+        node! { 11, 'c', [] },
+        node! { 12, 'd', [
+            node! { 22, 'e', [
+                node! { 32, 'f', [] }
+            ] },
+        ] },
+    ] }));
+
+    declarative_tree.insert_root(1, 'z');
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 1, 'z', [] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
 }

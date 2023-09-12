@@ -1,102 +1,80 @@
 use crate::{
     tests::utils::{
-        make_reverse_key_map,
-        make_tree_and_key_map,
         node,
+        DeclarativeTree,
     },
     Relationship,
 };
 
 #[test]
-fn test_get_relationship() {
-    let tests = [
-        ((None, 0, 1), None),
-        ((Some(node! { 0 }), 1, 2), None),
-        (
-            (Some(node! { 0, [node! { 1 }] }), 0, 1),
-            Some(Relationship::Ancestral {
-                ancestor_key: 0,
-                descendent_key: 1,
-            }),
-        ),
-        (
-            (Some(node! { 0, [node! { 1 }] }), 0, 0),
-            Some(Relationship::Same),
-        ),
-        (
-            (Some(node! { 0, [node! { 1 }] }), 1, 0),
-            Some(Relationship::Ancestral {
-                ancestor_key: 0,
-                descendent_key: 1,
-            }),
-        ),
-        (
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 1 },
-                        node! { 4 },
-                    ],
-                }),
-                1,
-                4,
-            ),
-            Some(Relationship::Siblings {
-                common_ancestor_key: 0,
-            }),
-        ),
-        (
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 1 },
-                        node! { 4 },
-                    ],
-                }),
-                4,
-                1,
-            ),
-            Some(Relationship::Siblings {
-                common_ancestor_key: 0,
-            }),
-        ),
-    ];
+fn test_get_relationship_from_empty_tree() {
+    let declarative_tree = DeclarativeTree::<_, char>::from_declarative_node(None);
 
-    for ((decl_tree, key_1, key_2), expected_relationship) in tests {
-        let (tree, key_map) = make_tree_and_key_map(decl_tree.as_ref());
+    assert!(declarative_tree.get_relationship(0, 1).is_none());
+    assert!(declarative_tree.get_relationship(1, 0).is_none());
+}
 
-        let key_1 = key_map.get(&key_1).copied().unwrap_or_default();
-        let key_2 = key_map.get(&key_2).copied().unwrap_or_default();
+#[test]
+fn test_get_relationship_from_single_element_tree() {
+    let declarative_tree = DeclarativeTree::<_, char>::from_declarative_node(Some(&node! { 0, 'a', [] }));
 
-        let reverse_map = make_reverse_key_map(&key_map);
+    assert!(declarative_tree.get_relationship(0, 1).is_none());
+    assert!(declarative_tree.get_relationship(1, 0).is_none());
+}
 
-        let actual_relationship = tree.get_relationship(key_1, key_2);
-        let actual_relationship =
-            actual_relationship.map(|actual_relationship| match actual_relationship {
-                Relationship::Same => Relationship::Same,
-                Relationship::Siblings {
-                    common_ancestor_key,
-                } => {
-                    let common_ancestor_key = *reverse_map.get(&common_ancestor_key).unwrap();
-                    Relationship::Siblings {
-                        common_ancestor_key,
-                    }
-                }
-                Relationship::Ancestral {
-                    ancestor_key,
-                    descendent_key,
-                } => {
-                    let ancestor_key = *reverse_map.get(&ancestor_key).unwrap();
-                    let descendent_key = *reverse_map.get(&descendent_key).unwrap();
-                    Relationship::Ancestral {
-                        ancestor_key,
-                        descendent_key,
-                    }
-                }
-            });
+#[test]
+fn test_get_relationship_from_multi_element_tree_with_non_existent_keys() {
+    let declarative_tree = DeclarativeTree::<_, char>::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [] },
+        node! { 2, 'c', [
+            node! { 3, 'd', [] },
+        ] },
+    ] }));
 
-        assert_eq!(actual_relationship, expected_relationship);
-    }
+    assert!(declarative_tree.get_relationship(100, 200).is_none());
+    assert!(declarative_tree.get_relationship(200, 100).is_none());
+}
+
+#[test]
+fn test_get_relationship_from_multi_element_sibling() {
+    let declarative_tree = DeclarativeTree::<_, char>::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [] },
+        node! { 2, 'c', [
+            node! { 3, 'd', [
+                node! { 4, 'e', [] },
+                node! { 5, 'f', [
+                    node! { 6, 'g', [] },
+                    node! { 7, 'h', [] },
+                ] }
+            ] },
+            node! { 8, 'i', [
+                node! { 9, 'j', [] },
+            ] },
+        ] },
+    ] }));
+
+    assert_eq!(declarative_tree.get_relationship(7, 9), Some(Relationship::Siblings { common_ancestor_key: 2 }));
+    assert_eq!(declarative_tree.get_relationship(9, 7), Some(Relationship::Siblings { common_ancestor_key: 2 }));
+}
+
+#[test]
+fn test_get_relationship_from_multi_element_ancestral() {
+    let declarative_tree = DeclarativeTree::<_, char>::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [] },
+        node! { 2, 'c', [
+            node! { 3, 'd', [
+                node! { 4, 'e', [] },
+                node! { 5, 'f', [
+                    node! { 6, 'g', [] },
+                    node! { 7, 'h', [] },
+                ] }
+            ] },
+            node! { 8, 'i', [
+                node! { 9, 'j', [] },
+            ] },
+        ] },
+    ] }));
+
+    assert_eq!(declarative_tree.get_relationship(2, 7), Some(Relationship::Ancestral { ancestor_key: 2, descendent_key: 7 }));
+    assert_eq!(declarative_tree.get_relationship(7, 2), Some(Relationship::Ancestral { ancestor_key: 2, descendent_key: 7 }));
 }
