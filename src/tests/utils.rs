@@ -33,7 +33,6 @@ macro_rules! node {
 
 use std::collections::BTreeMap;
 
-use indexmap::IndexSet;
 pub use node;
 use slotmap::DefaultKey;
 
@@ -76,7 +75,7 @@ where
     }
 
     pub fn insert(&mut self, id: K, value: V, parent_id: K) -> bool {
-        let parent_key = get_or_default(self, parent_id);
+        let parent_key = get_or_default(&self.key_map, parent_id);
 
         self.tree
             .insert(value, parent_key)
@@ -87,33 +86,44 @@ where
             .is_some()
     }
 
-    pub fn reorder_children<F>(&mut self, id: K, get_reordered_keys: F) -> bool
+    pub fn reorder_children<F>(&mut self, id: K, get_reordered_ids: F) -> bool
     where
-        F: FnOnce(&IndexSet<DefaultKey>) -> IndexSet<DefaultKey>,
+        F: FnOnce(&Vec<K>) -> Vec<K>,
     {
-        let key = get_or_default(self, id);
+        let key = get_or_default(&self.key_map, id);
         let old_child_keys = self.tree.get(key).map(|node| node.child_keys.clone());
 
-        let did_reorder = self.tree.reorder_children(key, get_reordered_keys);
+        let key_map = self.key_map.clone();
+        let inverse_key_map = invert(&self.key_map);
+
+        let did_reorder = self.tree.reorder_children(key, |current_child_keys| {
+            let current_child_ids = current_child_keys.iter().map(|current_child_key| *inverse_key_map.get(&current_child_key).unwrap()).collect();
+
+            let mut reordered_children = get_reordered_ids(&current_child_ids);
+            reordered_children.dedup();
+            reordered_children.iter().map(|&id| get_or_default(&key_map, id)).collect()
+        });
 
         if did_reorder {
             let old_child_keys = old_child_keys.unwrap();
             let new_child_keys = self.tree.get(key).map(|node| node.child_keys.clone()).unwrap();
 
-            let mut inverse_key_map = invert(&self.key_map);
+            let mut inverse_key_map = inverse_key_map;
 
             for &key in old_child_keys.difference(&new_child_keys) {
                 let id = inverse_key_map.remove(&key).unwrap();
                 let removed_key = self.key_map.remove(&id).unwrap();
                 assert_eq!(key, removed_key);
             }
+
+            assert!(new_child_keys.difference(&old_child_keys).next().is_none());
         }
 
         did_reorder
     }
 
     pub fn remove(&mut self, id: K) -> Option<V> {
-        let key = get_or_default(self, id);
+        let key = get_or_default(&self.key_map, id);
         let value = self.tree.remove(key, None);
 
         if value.is_some() {
@@ -124,8 +134,8 @@ where
     }
 
     pub fn rebase(&mut self, id: K, new_parent_id: K) -> bool {
-        let key = get_or_default(self, id);
-        let new_parent_key = get_or_default(self, new_parent_id);
+        let key = get_or_default(&self.key_map, id);
+        let new_parent_key = get_or_default(&self.key_map, new_parent_id);
 
         self.tree.rebase(key, new_parent_key)
     }
@@ -133,8 +143,8 @@ where
     // Getter/setter methods:
 
     pub fn get_relationship(&self, id_1: K, id_2: K) -> Option<Relationship<K>> {
-        let key_1 = get_or_default(self, id_1);
-        let key_2 = get_or_default(self, id_2);
+        let key_1 = get_or_default(&self.key_map, id_1);
+        let key_2 = get_or_default(&self.key_map, id_2);
 
         self.tree
             .get_relationship(key_1, key_2)
@@ -280,12 +290,11 @@ where
     pub child_declarative_nodes: Vec<Self>,
 }
 
-fn get_or_default<K, V>(declarative_tree: &DeclarativeTree<K, V>, id: K) -> DefaultKey
+fn get_or_default<K>(key_map: &BTreeMap<K, DefaultKey>, id: K) -> DefaultKey
 where
     K: Copy + Ord,
-    V: Copy,
 {
-    declarative_tree.key_map.get(&id).copied().unwrap_or_default()
+    key_map.get(&id).copied().unwrap_or_default()
 }
 
 pub fn invert<A, B>(key_map: &BTreeMap<A, B>) -> BTreeMap<B, A>

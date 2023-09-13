@@ -1,113 +1,97 @@
 use crate::tests::utils::{
-    make_decl_tree,
-    make_tree_and_key_map,
     node,
+    DeclarativeTree,
 };
 
 #[test]
-fn test_reorder_children() {
-    let tests = [
-        // Test reordering children on empty tree
-        ((None, 0, vec![1, 2, 3]), (None, false)),
-        // Test reordering children with non-existent parent-key
-        (
-            (Some(node! { 0 }), 8, vec![1, 2, 3]),
-            (Some(node! { 0 }), false),
-        ),
-        // Test reordering children on node with no children
-        (
-            (Some(node! { 0 }), 0, vec![1, 2, 3]),
-            (Some(node! { 0 }), false),
-        ),
-        // Test reordering children on node with keys that are not its own children keys
-        (
-            (
-                Some(node! { 0, [
-                    node! { 1, [node! { 2 }, node! { 3 }, node! { 4 }]},
-                    node! { 5 },
-                ] }),
-                5,
-                vec![2, 3, 4],
-            ),
-            (
-                Some(node! { 0, [
-                    node! { 1, [node! { 2 }, node! { 3 }, node! { 4 }]},
-                    node! { 5 },
-                ] }),
-                false,
-            ),
-        ),
-        // Test basic reordering children
-        (
-            (
-                Some(node! { 0, [
-                    node! { 1, [node! { 2, [node! { 6 }] }, node! { 3 }, node! { 4 }]},
-                    node! { 5 },
-                ] }),
-                1,
-                vec![3, 2, 4],
-            ),
-            (
-                Some(node! { 0, [
-                    node! { 1, [node! { 3 }, node! { 2, [node! { 6 }] }, node! { 4 }]},
-                    node! { 5 },
-                ] }),
-                true,
-            ),
-        ),
-        // Test basic reordering children and removing key
-        (
-            (
-                Some(node! { 0, [
-                    node! { 1, [node! { 2, [node! { 6 }] }, node! { 3 }, node! { 4 }]},
-                    node! { 5 },
-                ] }),
-                1,
-                vec![4, 3],
-            ),
-            (
-                Some(node! { 0, [
-                    node! { 1, [node! { 4 }, node! { 3 }]},
-                    node! { 5 },
-                ] }),
-                true,
-            ),
-        ),
-        // Test basic reordering children and removing key
-        (
-            (
-                Some(node! { 0, [
-                    node! { 1, [node! { 2, [node! { 6 }] }, node! { 3, [node! { 7 }] }, node! { 4 }]},
-                    node! { 5 },
-                ] }),
-                1,
-                vec![4, 3],
-            ),
-            (
-                Some(node! { 0, [
-                    node! { 1, [node! { 4 }, node! { 3, [node! { 7 }] }]},
-                    node! { 5 },
-                ] }),
-                true,
-            ),
-        ),
-    ];
+fn test_reorder_children_on_empty_tree() {
+    let mut declarative_tree = DeclarativeTree::<_, char>::from_declarative_node(None);
 
-    for ((decl_tree, key, reordered_child_keys), (expected_decl_tree, expected_did_reorder)) in
-        tests
-    {
-        let (mut tree, key_map) = make_tree_and_key_map(decl_tree.as_ref());
+    assert!(!declarative_tree.reorder_children(0, |_| [0, 1, 2, 3].into()));
 
-        let key = key_map.get(&key).copied().unwrap_or_default();
-        let actual_did_reorder = tree.reorder_children(key, |_| {
-            reordered_child_keys
-                .into_iter()
-                .map(|child_key| key_map.get(&child_key).copied().unwrap_or_default())
-                .collect()
-        });
-        let actual_decl_tree = make_decl_tree(&tree);
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = None;
 
-        assert_eq!(actual_decl_tree, expected_decl_tree);
-        assert_eq!(actual_did_reorder, expected_did_reorder);
-    }
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_reorder_children_on_single_element_tree_with_non_existent_key() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [] }));
+
+    assert!(!declarative_tree.reorder_children(1, |_| [0, 1, 2, 3].into()));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_reorder_children_on_single_element_tree() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [] }));
+
+    // Fails if nonsense child-keys are passed in!
+    assert!(!declarative_tree.reorder_children(0, |_| [0, 1, 2, 3].into()));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_reorder_children_with_no_deletions() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 4, 'e', [] },
+            node! { 5, 'f', [] },
+        ] },
+        node! { 2, 'c', [] },
+        node! { 3, 'd', [
+            node! { 6, 'g', [] },
+        ] },
+    ] }));
+
+    assert!(declarative_tree.reorder_children(0, |_| [3, 2, 1].into()));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 3, 'd', [
+            node! { 6, 'g', [] },
+        ] },
+        node! { 2, 'c', [] },
+        node! { 1, 'b', [
+            node! { 4, 'e', [] },
+            node! { 5, 'f', [] },
+        ] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_reorder_children_with_deletions() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 4, 'e', [] },
+            node! { 5, 'f', [] },
+        ] },
+        node! { 2, 'c', [] },
+        node! { 3, 'd', [
+            node! { 6, 'g', [] },
+        ] },
+    ] }));
+
+    assert!(declarative_tree.reorder_children(0, |_| [3, 2].into()));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 3, 'd', [
+            node! { 6, 'g', [] },
+        ] },
+        node! { 2, 'c', [] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
 }

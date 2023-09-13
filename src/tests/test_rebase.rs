@@ -1,105 +1,138 @@
 use crate::tests::utils::{
-    make_decl_tree,
-    make_tree_and_key_map,
     node,
+    DeclarativeTree,
 };
 
 #[test]
-fn test_rebase() {
-    let tests = [
-        ((None, 0, 1), (None, false)),
-        ((Some(node! { 0 }), 0, 1), (Some(node! { 0 }), false)),
-        ((Some(node! { 0 }), 1, 0), (Some(node! { 0 }), false)),
-        ((Some(node! { 0 }), 8, 0), (Some(node! { 0 }), false)),
-        ((Some(node! { 0 }), 0, 0), (Some(node! { 0 }), true)),
-        (
-            (Some(node! { 0, [node! { 1 }, node! { 2 }] }), 1, 2),
-            (Some(node! { 0, [node! { 2, [node! { 1 }] } ] }), true),
-        ),
-        (
-            (Some(node! { 0, [node! { 1 }, node! { 2 }] }), 0, 1),
-            (Some(node! { 1, [ node! { 0, [ node! { 2 } ] } ] }), true),
-        ),
-        (
-            (Some(node! { 0, [ node! { 1, [ node! { 2 } ] } ] }), 0, 2),
-            (Some(node! { 2, [ node! { 0, [ node! { 1 } ] } ] }), true),
-        ),
-        (
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 10 },
-                        node! { 11 },
-                        node! { 12, [ node! { 20 }, node! { 21 } ] },
-                        node! { 13 },
-                    ]
-                }),
-                0,
-                21,
-            ),
-            (
-                Some(node! {
-                    21,
-                    [
-                        node! {
-                            0,
-                            [
-                                node! { 10 },
-                                node! { 11 },
-                                node! { 12, [ node! { 20 } ] },
-                                node! { 13 },
-                            ]
-                        }
-                    ]
-                }),
-                true,
-            ),
-        ),
-        (
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 10 },
-                        node! { 11 },
-                        node! { 12, [ node! { 20 }, node! { 21 } ] },
-                        node! { 13 },
-                    ]
-                }),
-                12,
-                21,
-            ),
-            (
-                Some(node! {
-                    0,
-                    [
-                        node! { 10 },
-                        node! { 11 },
-                        node! { 13 },
-                        node! { 21, [
-                            node! { 12, [ node! { 20 } ] }
-                        ] }
-                    ]
-                }),
-                true,
-            ),
-        ),
-    ];
+fn test_rebase_with_empty_tree() {
+    let mut declarative_tree = DeclarativeTree::<_, char>::from_declarative_node(None);
 
-    for ((decl_tree, key, new_parent_key), (expected_decl_tree, expected_did_rebase)) in tests {
-        let (mut tree, key_map) = make_tree_and_key_map(decl_tree.as_ref());
-        let before_length = tree.len();
+    assert!(!declarative_tree.rebase(1, 0));
+    assert!(!declarative_tree.rebase(0, 1));
+    assert!(!declarative_tree.rebase(1, 1));
+    assert!(!declarative_tree.rebase(0, 0));
 
-        let key = key_map.get(&key).copied().unwrap_or_default();
-        let new_parent_key = key_map.get(&new_parent_key).copied().unwrap_or_default();
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = None;
 
-        let actual_did_rebase = tree.rebase(key, new_parent_key);
-        let actual_decl_tree = make_decl_tree(&tree);
-        let after_length = tree.len();
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
 
-        assert_eq!(actual_did_rebase, expected_did_rebase);
-        assert_eq!(actual_decl_tree, expected_decl_tree);
-        assert_eq!(before_length, after_length);
-    }
+#[test]
+fn test_rebase_onto_self() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [] }));
+
+    assert!(!declarative_tree.rebase(0, 0));
+    assert!(!declarative_tree.rebase(1, 1));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_rebase_onto_sibling() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 3, 'd', [
+                node! { 6, 'g', [] }
+            ] },
+        ] },
+        node! { 2, 'c', [
+            node! { 4, 'e', [] },
+            node! { 5, 'f', [] },
+        ] },
+    ] }));
+
+    assert!(declarative_tree.rebase(3, 5));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 1, 'b', [] },
+        node! { 2, 'c', [
+            node! { 4, 'e', [] },
+            node! { 5, 'f', [
+                node! { 3, 'd', [
+                    node! { 6, 'g', [] }
+                ] },
+            ] },
+        ] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_rebase_onto_ancestor() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 3, 'd', [] },
+        ] },
+        node! { 2, 'c', [
+            node! { 4, 'e', [
+                node! { 6, 'g', [
+                    node! { 7, 'h', [] },
+                    node! { 8, 'i', [] },
+                ] },
+            ] },
+            node! { 5, 'f', [] },
+        ] },
+    ] }));
+
+    assert!(declarative_tree.rebase(6, 2));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 3, 'd', [] },
+        ] },
+        node! { 2, 'c', [
+            node! { 4, 'e', [] },
+            node! { 5, 'f', [] },
+            node! { 6, 'g', [
+                    node! { 7, 'h', [] },
+                    node! { 8, 'i', [] },
+            ] },
+        ] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
+}
+
+#[test]
+fn test_rebase_onto_descendent() {
+    let mut declarative_tree = DeclarativeTree::from_declarative_node(Some(&node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 3, 'd', [] },
+        ] },
+        node! { 2, 'c', [
+            node! { 4, 'e', [
+                node! { 6, 'g', [
+                    node! { 7, 'h', [] },
+                    node! { 8, 'i', [] },
+                ] },
+            ] },
+            node! { 5, 'f', [] },
+        ] },
+    ] }));
+
+    assert!(declarative_tree.rebase(2, 6));
+
+    let actual_declarative_node = declarative_tree.into_declarative_node();
+    let expected_declarative_node = Some(node! { 0, 'a', [
+        node! { 1, 'b', [
+            node! { 3, 'd', [] },
+        ] },
+        node! { 6, 'g', [
+                node! { 7, 'h', [] },
+                node! { 8, 'i', [] },
+                node! { 2, 'c', [
+                    node! { 4, 'e', [] },
+                    node! { 5, 'f', [] },
+                ] },
+        ] },
+    ] });
+
+    assert_eq!(actual_declarative_node, expected_declarative_node);
 }

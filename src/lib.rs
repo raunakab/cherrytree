@@ -430,31 +430,35 @@ where
             relationship: Relationship<K>,
             key: K,
             new_parent_key: K,
-        ) where
+        ) -> bool where
             K: Key,
         {
             match relationship {
-                Relationship::Same => (),
+                Relationship::Same => false,
 
                 Relationship::Ancestral { ancestor_key, .. } if new_parent_key == ancestor_key => {
-                    rebase_generic(tree, key, new_parent_key)
+                    rebase_generic(tree, key, new_parent_key);
+                    true
                 }
                 Relationship::Ancestral { descendent_key, .. }
                     if new_parent_key == descendent_key =>
                 {
-                    rebase_onto_descendent(tree, key, new_parent_key)
+                    rebase_onto_descendent(tree, key, new_parent_key);
+                    true
                 }
                 Relationship::Ancestral { .. } => unreachable!(),
 
-                Relationship::Siblings { .. } => rebase_generic(tree, key, new_parent_key),
-            };
+                Relationship::Siblings { .. } => {
+                    rebase_generic(tree, key, new_parent_key);
+                    true
+                },
+            }
         }
 
         self.get_relationship(key, new_parent_key)
-            .map(|relationship| {
-                rebase(self, relationship, key, new_parent_key);
+            .map_or(false, |relationship| {
+                rebase(self, relationship, key, new_parent_key)
             })
-            .is_some()
     }
 
     /// Clears this [`Tree`] instance of *all* its values. Keeps the allocated
