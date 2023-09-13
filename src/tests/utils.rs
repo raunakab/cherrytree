@@ -97,16 +97,26 @@ where
         let inverse_key_map = invert(&self.key_map);
 
         let did_reorder = self.tree.reorder_children(key, |current_child_keys| {
-            let current_child_ids = current_child_keys.iter().map(|current_child_key| *inverse_key_map.get(&current_child_key).unwrap()).collect();
+            let current_child_ids = current_child_keys
+                .iter()
+                .map(|current_child_key| *inverse_key_map.get(&current_child_key).unwrap())
+                .collect();
 
             let mut reordered_children = get_reordered_ids(&current_child_ids);
             reordered_children.dedup();
-            reordered_children.iter().map(|&id| get_or_default(&key_map, id)).collect()
+            reordered_children
+                .iter()
+                .map(|&id| get_or_default(&key_map, id))
+                .collect()
         });
 
         if did_reorder {
             let old_child_keys = old_child_keys.unwrap();
-            let new_child_keys = self.tree.get(key).map(|node| node.child_keys.clone()).unwrap();
+            let new_child_keys = self
+                .tree
+                .get(key)
+                .map(|node| node.child_keys.clone())
+                .unwrap();
 
             let mut inverse_key_map = inverse_key_map;
 
