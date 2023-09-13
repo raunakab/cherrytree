@@ -430,7 +430,8 @@ where
             relationship: Relationship<K>,
             key: K,
             new_parent_key: K,
-        ) -> bool where
+        ) -> bool
+        where
             K: Key,
         {
             match relationship {
@@ -451,7 +452,7 @@ where
                 Relationship::Siblings { .. } => {
                     rebase_generic(tree, key, new_parent_key);
                     true
-                },
+                }
             }
         }
 
