@@ -1,7 +1,7 @@
-use crate::tests::utils::{
-    node,
-    DeclarativeTree,
-};
+#[path = "../common/mod.rs"]
+mod common;
+
+use common::DeclarativeTree;
 
 #[test]
 fn test_rebase_with_empty_tree() {

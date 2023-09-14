@@ -5,7 +5,7 @@ macro_rules! node {
         $value:expr
         $(,)?
     ) => {{
-        use crate::tests::utils::DeclarativeNode;
+        use common::DeclarativeNode;
         DeclarativeNode {
             id: $id,
             value: $value,
@@ -22,7 +22,7 @@ macro_rules! node {
         ]
         $(,)?
     ) => {{
-        use crate::tests::utils::DeclarativeNode;
+        use common::DeclarativeNode;
         DeclarativeNode {
             id: $id,
             value: $value,
@@ -33,13 +33,13 @@ macro_rules! node {
 
 use std::collections::BTreeMap;
 
-pub use node;
-use slotmap::DefaultKey;
-
-use crate::{
+use cherrytree::{
     Relationship,
     Tree,
 };
+
+pub use node;
+use slotmap::DefaultKey;
 
 #[derive(Clone)]
 pub struct DeclarativeTree<K, V>
