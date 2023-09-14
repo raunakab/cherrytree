@@ -1,10 +1,9 @@
-use crate::{
-    tests::utils::{
-        node,
-        DeclarativeTree,
-    },
-    Relationship,
-};
+#[path = "../common/mod.rs"]
+mod common;
+
+use common::DeclarativeTree;
+
+use cherrytree::Relationship;
 
 #[test]
 fn test_get_relationship_from_empty_tree() {

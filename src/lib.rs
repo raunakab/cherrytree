@@ -59,9 +59,6 @@
 //! # }
 //! ```
 
-#[cfg(any(test, feature = "decl_tree"))]
-pub mod tests;
-
 use std::mem::replace;
 
 use indexmap::IndexSet;

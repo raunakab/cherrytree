@@ -1,7 +1,7 @@
-use crate::tests::utils::{
-    node,
-    DeclarativeTree,
-};
+#[path = "../common/mod.rs"]
+mod common;
+
+use common::DeclarativeTree;
 
 #[test]
 fn test_reorder_children_on_empty_tree() {

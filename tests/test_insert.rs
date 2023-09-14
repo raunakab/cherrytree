@@ -1,7 +1,7 @@
-use crate::tests::utils::{
-    node,
-    DeclarativeTree,
-};
+#[path = "../common/mod.rs"]
+mod common;
+
+use common::DeclarativeTree;
 
 #[test]
 fn test_insert_into_empty_tree_with_a_non_existent_parent_key() {
