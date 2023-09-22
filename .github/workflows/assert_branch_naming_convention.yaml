@@ -1,14 +1,14 @@
 name: Assert Branch Naming Convention
 
-on:
-  pull_request
+on: pull_request
 
 jobs:
-  naming-rules:
+  branch-naming-rules:
     runs-on: ubuntu-latest
 
     steps:
       - uses: deepakputhraya/action-branch-name@master
         with:
-          regex: /(feature|hotfix)\/\w*/gm
+          regex: (feature|fix)\/\w*\gm
+          allowed_prefixes: feature,fix
           ignore: master
