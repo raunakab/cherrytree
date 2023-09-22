@@ -17,7 +17,7 @@ Certain popular applications include DOMs and non-cyclical solvers.
 
 ## Features
 
-#### Immutable APIs:
+#### Immutable APIs
 
 - Constant time access to an immutable reference to a `Node`s value, its child keys, and its optional parent key given the unique key that identifies it.
 
@@ -25,7 +25,7 @@ Certain popular applications include DOMs and non-cyclical solvers.
 
 - Immutable iterator over the `Node`s of the `Tree` in some arbitrary order. BFS and DFS immutable iterators are planning on being supported in a future release.
 
-#### Mutable APIs:
+#### Mutable APIs
 
 - Constant time access to a mutable reference to a `Node`s value. This API will **not**, however, provide mutable references to its child keys and optional parent key in order to preserve the integrity of the `Tree` instance.
 
@@ -36,6 +36,16 @@ Certain popular applications include DOMs and non-cyclical solvers.
 - Reordering the child keys of a `Node`. Child keys are inserted into a `Node` in insertion-order (i.e., first come, first in). As such, the child keys can be reordered to match some new desired order.
 
 - Mutable iterator over the `Node`s of the `Tree` in some arbitrary order. BFS and DFS mutable iterators are planning on being supported in a future release.
+
+<br>
+
+## Implementation
+| Design | Notes |
+| - | - |
+| `SlotMap`-backed allocation pool | Provides constant time access to data held in the map. This is how `cherrytree` can access `Nodes` quickly. |
+| | Deletions from the map will leave "holes" which can then be reused (`SlotMap` provisions a key for you, so it will provision a key which corresponds to a hole). As such, deletions do **not** require other data to be shifted down. |
+| | Implements "phase-based deallocation", which means all of its memory is released only when the `Tree` is being destructed. For long-lived trees (e.g., DOMs), this can avoid unnecessary runtime deallocations. |
+| `IndexSet`-backed child-key storage | ... |
 
 <br>
 
@@ -92,13 +102,6 @@ Further examples of programs can be found in the [examples directory](./examples
 
 Each example file is prefixed with a number and followed by a short explanation on what that example showcases (e.g., `1_this_example_does_xyz.rs`, `2_this_example_does_abc.rs`).
 It is recommended to read through the examples in numerical order.
-
-<br>
-
-## Implementation
-
-Internaly, a `Tree` just contains a map of `Node`s, and each `Node` contains the value it was given as well as the keys to other `Node`s in the map.
-This way, given some key, a `Node` can be queried for in constant time.
 
 <br>
 
