@@ -39,6 +39,17 @@ Certain popular applications include DOMs and non-cyclical solvers.
 
 <br>
 
+## Usage
+
+Add this to your `Cargo.toml` manifest file, substituting the `VERSION_NUMBER` variable for any real version:
+
+```toml
+[dependencies]
+cherrytree = "${VERSION_NUMBER}"
+```
+
+<br>
+
 ## Examples
 
 ### Basic
@@ -99,17 +110,6 @@ Further examples of programs can be found in the [examples directory](./examples
 
 Each example file is prefixed with a number and followed by a short explanation on what that example showcases (e.g., `1_this_example_does_xyz.rs`, `2_this_example_does_abc.rs`).
 It is recommended to read through the examples in numerical order.
-
-<br>
-
-## Usage
-
-Add this to your `Cargo.toml` manifest file, substituting the `VERSION_NUMBER` variable for any real version:
-
-```toml
-[dependencies]
-cherrytree = "${VERSION_NUMBER}"
-```
 
 <br>
 
