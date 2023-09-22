@@ -7,6 +7,16 @@ This `Tree` data structure has been specifically designed in such a way that *ea
 This proves highly suitable for applications where data needs to be grouped in a tree-like fashion while also being able to be retrieved as quickly as possible.
 Certain popular applications include DOMs and non-cyclical solvers.
 
+`Tree` provides APIs such as:
+- basic immutable APIs:
+    - getting the value of a `Node`
+    - getting the relationship between two `Node`s in the `Tree`
+- more advanced mutable APIs:
+    - removing `Node`s (which then removes its entire subtree)
+    - arbitrarily reordering children `Node`s
+    - rebasing `Node`s onto other `Node`s (regardless of their relationship)
+        - i.e., can even rebase a parent `Node` onto one of its descendent `Node`s
+
 ## Example:
 
 ```rust
@@ -42,6 +52,18 @@ fn main() {
 }
 ```
 
+Further examples of programs can be found in the [examples directory](./examples).
+Each example file is prefixed with a number and followed by a short explanation on what that example showcases (e.g., `1_this_example_does_xyz.rs`, `2_this_example_does_abc.rs`).
+It is recommended to read through the examples in numerical order.
+
+## Usage
+Add this to your `Cargo.toml` manifest file:
+
+```toml
+[dependencies]
+rand = "0.8.5"
+```
+
 ## Theory:
 Formally, a [tree](https://en.wikipedia.org/wiki/Tree_(data_structure)) is
 just a [graph](https://en.wikipedia.org/wiki/Graph_(discrete_mathematics)).
@@ -62,8 +84,3 @@ This way, given some key, a `Node` can be queried for in constant time.
 ## License
 This software is licensed under the [BSD 3-Clause License](./LICENSE-BSD-3-CLAUSE).
 The license's source can be found [here](https://opensource.org/license/bsd-3-clause/).
-
-## Examples:
-Examples of programs can be found in the [examples directory](./examples).
-Each example file is prefixed with a number and followed by a short explanation on what that example showcases (e.g., `1_this_example_does_xyz.rs`, `2_this_example_does_abc.rs`).
-It is recommended to read through the examples in numerical order.
