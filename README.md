@@ -1,4 +1,11 @@
-# `cherrytree`: A small, simple, and correct tree implementation.
+<div style="text-align: center;">
+    <h1>cherrytree 🍒🌳</h1>
+    <p><strong>A small, simple, and correct tree implementation.</strong></p>
+</div>
+
+<br>
+
+## Overview
 
 `cherrytree` is a library which provies a safe, simple, and correct API over a tree data structure, "`Tree`".
 
