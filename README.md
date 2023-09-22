@@ -41,8 +41,10 @@ Certain popular applications include DOMs and non-cyclical solvers.
 
 ## Examples
 
-The following example showcases how to create a `Tree` instance, insert a root `Node`, some children `Node`s, and update one of the `Node`'s values.
+### Basic
+Let's take a look at how to interact with a `Tree` instance.
 
+First we create a tree which stores `usize`s and uses `DefaultKey`s to index into it.
 ```rust
 use cherrytree::{
     Node,
@@ -50,31 +52,48 @@ use cherrytree::{
 };
 use slotmap::DefaultKey;
 
-fn main() {
-    // Create a default, empty tree:
-    let mut tree = Tree::<DefaultKey, usize>::default();
-
-    // Insert a root value:
-    let root_key = tree.insert_root(0);
-
-    // Insert some children values:
-    let child_key_1 = tree.insert(1, root_key).unwrap();
-    let child_key_2 = tree.insert(2, root_key).unwrap();
-    let child_key_3 = tree.insert(3, root_key).unwrap();
-
-    // Get an immutable reference to one of the children's value:
-    let child_node_1 = tree.get(child_key_1).unwrap();
-    assert_eq!(*child_node_1.value, 1);
-
-    // Or get a mutable reference to one of the children's value:
-    let child_node_2 = tree.get_mut(child_key_2).unwrap();
-    *child_node_2.value = 100;
-
-    // And assert that that value has been updated:
-    let child_node_2 = tree.get(child_key_2).unwrap();
-    assert_eq!(*child_node_2.value, 100);
-}
+let mut tree = Tree::<DefaultKey, usize>::default();
 ```
+
+We then insert a root `Node`.
+
+```rust
+let root_key = tree.insert_root(0);
+```
+
+And then insert some children `Node`s under the root `Node`.
+The way we do this is by calling the `insert` method and pass the `root_key` we created earlier to notify the tree to use that node as the parent.
+
+```rust
+let child_key_1 = tree.insert(1, root_key).unwrap();
+let child_key_2 = tree.insert(2, root_key).unwrap();
+let child_key_3 = tree.insert(3, root_key).unwrap();
+```
+
+We can then get the first child `Node` (in constant time) that we inserted and pull its value out.
+This value will be an immutable reference, so we will **not** be able to mutate it.
+
+```rust
+let child_node_1 = tree.get(child_key_1).unwrap();
+assert_eq!(*child_node_1.value, 1);
+```
+
+We can also get the second child `Node` (in constant time) that we inserted and pull its value out.
+This time, the value will be a mutable reference, so we **can** mutate it!
+
+```rust
+let child_node_2 = tree.get_mut(child_key_2).unwrap();
+assert_eq!(*child_node_2.value, 2);
+*child_node_2.value = 100;
+
+// assert that the value has indeed been updated
+let child_node_2 = tree.get(child_key_2).unwrap();
+assert_eq!(*child_node_2.value, 100);
+```
+
+<br>
+
+### More Examples
 
 Further examples of programs can be found in the [examples directory](./examples).
 
