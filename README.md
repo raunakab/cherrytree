@@ -1,4 +1,4 @@
-<div style="text-align: center;">
+<div align="center">
     <h1>cherrytree 🍒🌳</h1>
     <p><strong>A small, simple, and correct tree implementation.</strong></p>
 </div>
