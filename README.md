@@ -7,23 +7,6 @@ This `Tree` data structure has been specifically designed in such a way that *ea
 This proves highly suitable for applications where data needs to be grouped in a tree-like fashion while also being able to be retrieved as quickly as possible.
 Certain popular applications include DOMs and non-cyclical solvers.
 
-## Theory:
-Formally, a [tree](https://en.wikipedia.org/wiki/Tree_(data_structure)) is
-just a [graph](https://en.wikipedia.org/wiki/Graph_(discrete_mathematics)).
-However, it's not just any type of graph; a tree is a special type of graph
-that enforces certain invariants on the structure of its nodes and edges.
-
-Namely, the following invariants must be held:
-- Each node (except for one) must have exactly 1 other node pointing to it. This other node pointing to it is referred to as the parent node.
-- The remaining node must have 0 other nodes pointing to it. This is the root node.
-
-If any arbitrary graph meets the above requirements, then it can also be
-classified as a tree.
-
-## Implementation:
-Internaly, a `Tree` just contains a map of `Node`s, and each `Node` contains the value it was given as well as the keys to other `Node`s in the map.
-This way, given some key, a `Node` can be queried for in constant time.
-
 ## Example:
 
 ```rust
@@ -58,6 +41,23 @@ fn main() {
     assert_eq!(*child_node_2.value, 100);
 }
 ```
+
+## Theory:
+Formally, a [tree](https://en.wikipedia.org/wiki/Tree_(data_structure)) is
+just a [graph](https://en.wikipedia.org/wiki/Graph_(discrete_mathematics)).
+However, it's not just any type of graph; a tree is a special type of graph
+that enforces certain invariants on the structure of its nodes and edges.
+
+Namely, the following invariants must be held:
+- Each node (except for one) must have exactly 1 other node pointing to it. This other node pointing to it is referred to as the parent node.
+- The remaining node must have 0 other nodes pointing to it. This is the root node.
+
+If any arbitrary graph meets the above requirements, then it can also be
+classified as a tree.
+
+## Implementation:
+Internaly, a `Tree` just contains a map of `Node`s, and each `Node` contains the value it was given as well as the keys to other `Node`s in the map.
+This way, given some key, a `Node` can be queried for in constant time.
 
 ## License
 This software is licensed under the [BSD 3-Clause License](./LICENSE-BSD-3-CLAUSE).
