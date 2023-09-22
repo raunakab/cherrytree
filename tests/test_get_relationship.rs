@@ -1,9 +1,8 @@
 #[path = "../common/mod.rs"]
 mod common;
 
-use common::DeclarativeTree;
-
 use cherrytree::Relationship;
+use common::DeclarativeTree;
 
 #[test]
 fn test_get_relationship_from_empty_tree() {
