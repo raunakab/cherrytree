@@ -1,41 +1,16 @@
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 
 //! A small, simple, and correct tree implementation.
 //!
-//! # Overview:
-//! `cherrytree` is a library which exports safe and correct APIs for
-//! interacting with tree data structures. The main way it does this is by
-//! exporting a generic [`Tree`] type with associated methods to read and write
-//! to it. ...But what exactly is a tree?
-//!
-//! ## Theory:
-//! Formally, a [tree](https://en.wikipedia.org/wiki/Tree_(data_structure)) is
-//! just a [graph](https://en.wikipedia.org/wiki/Graph_(discrete_mathematics)).
-//! However, it's not just any type of graph; a tree is a special type of graph
-//! that enforces certain invariants on the structure of its nodes and edges.
-//!
-//! Namely, the following invariants must be held:
-//! - Each node (except for one) must have exactly 1 other node pointing to it
-//! - The remaining node must have 0 other nodes pointing to it
-//!
-//! If any arbitrary graph meets the above requirements, then it can also be
-//! classified as a tree!
-//!
-//! ## Implementation:
-//! Therefore, internally, the [`Tree`] type is just a graph with the above
-//! invariants enforced. Any mutations or modifications to this [`Tree`] will
-//! *continue* to enforce these invariants, thus ensuring the end-user of a safe
-//! and correct implementation of a tree for whatever purpose they desire.
-//!
 //! # Example:
 //! ```
-//! # fn main() {
 //! use cherrytree::{
 //!     Node,
 //!     Tree,
 //! };
 //! use slotmap::DefaultKey;
 //!
+//! # fn main() {
 //! // Create a default, empty tree:
 //! let mut tree = Tree::<DefaultKey, usize>::default();
 //!
