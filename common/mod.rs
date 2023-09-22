@@ -37,7 +37,6 @@ use cherrytree::{
     Relationship,
     Tree,
 };
-
 pub use node;
 use slotmap::DefaultKey;
 
