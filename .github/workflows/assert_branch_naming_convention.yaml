@@ -9,6 +9,5 @@ jobs:
     steps:
       - uses: deepakputhraya/action-branch-name@master
         with:
-          regex: \/\w*
-          allowed_prefixes: feature,fix
+          regex: (feature|fix)\/\w*
           ignore: master
