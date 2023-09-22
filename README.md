@@ -42,10 +42,11 @@ Certain popular applications include DOMs and non-cyclical solvers.
 ## Implementation
 | Design | Notes |
 | - | - |
-| `SlotMap`-backed allocation pool | Provides constant time access to data held in the map. This is how `cherrytree` can access `Nodes` quickly. |
-| | Deletions from the map will leave "holes" which can then be reused (`SlotMap` provisions a key for you, so it will provision a key which corresponds to a hole). As such, deletions do **not** require other data to be shifted down. |
+| `SlotMap`-backed allocation pool | Provides constant time access to data held in the map. |
+| | Deletions from the map will leave "holes" which can then be reused. As such, deletions do **not** require other data to be shifted down. |
 | | Implements "phase-based deallocation", which means all of its memory is released only when the `Tree` is being destructed. For long-lived trees (e.g., DOMs), this can avoid unnecessary runtime deallocations. |
-| `IndexSet`-backed child-key storage | ... |
+| `IndexSet`-backed child-key storage | `IndexSet` preserves insertion order, so iterating over the child-keys of a `Node` will produce deterministic ordering. |
+| | Constant time checks for existence in the set. (Note that the performance benefits of sets over vectors only come into effect as the number of elements increases. For very skinny `Tree`s, this implementation may actually be more costly.) |
 
 <br>
 
