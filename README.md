@@ -8,6 +8,7 @@ A small, simple, and correct tree implementation.
 This proves highly suitable for applications where data needs to be grouped in a tree-like fashion while also being able to be retrieved as quickly as possible.
 Certain popular applications include DOMs and non-cyclical solvers.
 
+## Features:
 `Tree` provides:
 - basic immutable APIs such as:
     - getting the value of a `Node` in constant time
