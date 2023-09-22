@@ -3,19 +3,23 @@ A small, simple, and correct tree implementation.
 
 ## Overview:
 `cherrytree` is a library which provies a safe, simple, and correct API over a tree data structure, "`Tree`".
-This `Tree` data structure has been specifically designed in such a way that *each* node inside of it can be queried with a unique key in *constant time*.
+
+`Tree` has been specifically designed in such a way that *each* node inside of it can be queried with a unique key in *constant time*.
 This proves highly suitable for applications where data needs to be grouped in a tree-like fashion while also being able to be retrieved as quickly as possible.
 Certain popular applications include DOMs and non-cyclical solvers.
 
-`Tree` provides APIs such as:
-- basic immutable APIs:
-    - getting the value of a `Node`
+`Tree` provides:
+- basic immutable APIs such as:
+    - getting the value of a `Node` in constant time
     - getting the relationship between two `Node`s in the `Tree`
-- more advanced mutable APIs:
+    - immutably iterating over `Node`s
+
+- more advanced mutable APIs such as:
     - removing `Node`s (which then removes its entire subtree)
     - arbitrarily reordering children `Node`s
     - rebasing `Node`s onto other `Node`s (regardless of their relationship)
         - i.e., can even rebase a parent `Node` onto one of its descendent `Node`s
+    - mutably iterating over `Node`s
 
 ## Example:
 
