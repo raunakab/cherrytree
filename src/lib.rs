@@ -4,10 +4,7 @@
 //!
 //! # Example:
 //! ```
-//! use cherrytree::{
-//!     Node,
-//!     Tree,
-//! };
+//! use cherrytree::{Node, Tree};
 //! use slotmap::DefaultKey;
 //!
 //! # fn main() {
@@ -37,10 +34,7 @@
 use std::mem::replace;
 
 use indexmap::IndexSet;
-use slotmap::{
-    Key,
-    SlotMap,
-};
+use slotmap::{Key, SlotMap};
 
 /// The data-structure containing all the data required to implement a fully
 /// function arbitrary-arity-tree.
@@ -284,8 +278,7 @@ where
             if key == root_key {
                 let root_value = remove_root(self, root_key);
                 Some(root_value)
-            }
-            else {
+            } else {
                 remove_non_root(self, key, size_hint)
             }
         })
@@ -544,8 +537,7 @@ where
         {
             if key_1 == key_2 {
                 Relationship::Same
-            }
-            else {
+            } else {
                 let mut current_parent_key = tree.inner_nodes.get(key_1).unwrap().parent_key;
                 let length = tree.inner_nodes.len();
                 let mut path = IndexSet::with_capacity(length);
@@ -582,8 +574,7 @@ where
                                 return Relationship::Siblings {
                                     common_ancestor_key: parent_key,
                                 };
-                            }
-                            else {
+                            } else {
                                 current_parent_key =
                                     tree.inner_nodes.get(parent_key).unwrap().parent_key;
                             }

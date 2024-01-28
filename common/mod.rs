@@ -33,10 +33,7 @@ macro_rules! node {
 
 use std::collections::BTreeMap;
 
-use cherrytree::{
-    Relationship,
-    Tree,
-};
+use cherrytree::{Relationship, Tree};
 pub use node;
 use slotmap::DefaultKey;
 
@@ -168,14 +165,12 @@ where
                             ancestor_key: id_1,
                             descendent_key: id_2,
                         }
-                    }
-                    else if ancestor_key == key_2 && descendent_key == key_1 {
+                    } else if ancestor_key == key_2 && descendent_key == key_1 {
                         Relationship::Ancestral {
                             ancestor_key: id_2,
                             descendent_key: id_1,
                         }
-                    }
-                    else {
+                    } else {
                         unreachable!()
                     }
                 }
