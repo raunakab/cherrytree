@@ -9,8 +9,8 @@ use crate::Tree;
 /// to the [`Tree`] instance. I.e.:
 ///
 /// ```no_run
-/// use slotmap::DefaultKey;
 /// use cherrytree::Tree;
+/// use slotmap::DefaultKey;
 ///
 /// let mut tree = Tree::<DefaultKey, u8>::default();
 /// let root_key = tree.insert_root(0);
@@ -24,8 +24,8 @@ use crate::Tree;
 /// as well as the parent key! For example:
 ///
 /// ```no_run
-/// use slotmap::DefaultKey;
 /// use cherrytree::Tree;
+/// use slotmap::DefaultKey;
 ///
 /// // This function *needs* to have `tree` and `parent_key` as parameters.
 /// // Otherwise, it can't add to the tree!
@@ -57,7 +57,7 @@ use crate::Tree;
 /// [`Tree`] up *after* the function has returned. E.g.:
 ///
 /// ```no_run
-/// use cherrytree::{Tree, tree_builder::TreeBuilder};
+/// use cherrytree::{tree_builder::TreeBuilder, Tree};
 /// use slotmap::DefaultKey;
 ///
 /// // Notice how this function does *not* need any additional parameters!
