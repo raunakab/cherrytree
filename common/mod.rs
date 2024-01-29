@@ -34,7 +34,6 @@ macro_rules! node {
 use std::collections::BTreeMap;
 
 use cherrytree::{Relationship, Tree};
-pub use node;
 use slotmap::DefaultKey;
 
 #[derive(Clone)]
