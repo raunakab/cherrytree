@@ -9,6 +9,9 @@ use crate::Tree;
 /// to the [`Tree`] instance. I.e.:
 ///
 /// ```no_run
+/// use slotmap::DefaultKey;
+/// use cherrytree::Tree;
+///
 /// let mut tree = Tree::<DefaultKey, u8>::default();
 /// let root_key = tree.insert_root(0);
 ///
@@ -21,6 +24,9 @@ use crate::Tree;
 /// as well as the parent key! For example:
 ///
 /// ```no_run
+/// use slotmap::DefaultKey;
+/// use cherrytree::Tree;
+///
 /// // This function *needs* to have `tree` and `parent_key` as parameters.
 /// // Otherwise, it can't add to the tree!
 /// fn add_children(tree: &mut Tree<DefaultKey, u8>, parent_key: DefaultKey) {
@@ -51,6 +57,9 @@ use crate::Tree;
 /// [`Tree`] up *after* the function has returned. E.g.:
 ///
 /// ```no_run
+/// use cherrytree::{Tree, tree_builder::TreeBuilder};
+/// use slotmap::DefaultKey;
+///
 /// // Notice how this function does *not* need any additional parameters!
 /// fn add_children() -> TreeBuilder<u8> {
 ///     let mut tree_builder = TreeBuilder::new(2);
@@ -63,10 +72,10 @@ use crate::Tree;
 /// let mut tree_builder = TreeBuilder::<u8>::new(0);
 /// let other_tree_builder = add_children();
 ///
-/// tree_builder.extend(other_tree_builder);
+/// tree_builder.extend(other_tree_builder, None);
 ///
 /// // Finally, turn it into a [`Tree`] instance:
-/// let tree = tree_builder.finish();
+/// let tree = tree_builder.finish::<DefaultKey>();
 /// ```
 pub struct TreeBuilder<V> {
     root_value: V,
