@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 use slotmap::Key;
 
 use crate::Tree;
@@ -62,56 +64,64 @@ use crate::Tree;
 ///
 /// // Notice how this function does *not* need any additional parameters!
 /// fn add_children() -> TreeBuilder<u8> {
-///     let mut tree_builder = TreeBuilder::new(2);
-///     let index = tree_builder.push(3, None);
-///     let _ = tree_builder.push(4, Some(index));
+///     let mut tree_builder = TreeBuilder::default();
+///
+///     let root_index = tree_builder.push_root(2);
+///     let index = tree_builder.push(3, root_index);
+///     let _ = tree_builder.push(4, index);
 ///
 ///     tree_builder
 /// }
 ///
-/// let mut tree_builder = TreeBuilder::<u8>::new(0);
+/// let mut tree_builder = TreeBuilder::<u8>::default();
 /// let other_tree_builder = add_children();
 ///
-/// tree_builder.extend(other_tree_builder, None);
+/// let root_index = tree_builder.push_root(0);
+/// tree_builder.extend(other_tree_builder, root_index);
 ///
 /// // Finally, turn it into a [`Tree`] instance:
 /// let tree = tree_builder.finish::<DefaultKey>();
 /// ```
-pub struct TreeBuilder<V> {
-    root_value: V,
-    hooks: Vec<(V, Option<usize>)>,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeBuilder<V>(Option<Inner<V>>);
+
+impl<V> Default for TreeBuilder<V> {
+    fn default() -> Self {
+        Self(None)
+    }
 }
 
 impl<V> TreeBuilder<V> {
-    /// Construct a new [`TreeBuilder<V>`] with some given `root_value`.
-    pub fn new(root_value: V) -> Self {
-        Self {
-            root_value,
-            hooks: vec![],
-        }
-    }
-
-    /// Push a new "hook" into this [`TreeBuilder<V>`].
+    /// Push a new root "hook" into this [`TreeBuilder`] instance.
     ///
     /// Returns a [`usize`]. Think of this as a "unique" key which identifies
-    /// the newly inserted value. The `parent_index` is the index of the
-    /// parent-value for which you want this given value to be a child of.
-    pub fn push(&mut self, value: V, parent_index: Option<usize>) -> usize {
-        let length = self.hooks.len();
+    /// the newly inserted value.
+    pub fn push_root(&mut self, root_value: V) -> usize {
+        self.0 = Some(Inner {
+            root_value,
+            hooks: vec![],
+        });
+        0
+    }
 
-        let is_valid = match (parent_index, length) {
-            (Some(_), 0) => false,
-            (Some(parent_index), _) if parent_index <= length - 1 => true,
-            (Some(_), _) => false,
-            (None, _) => true,
-        };
+    /// Push a new child "hook" into this [`TreeBuilder`] instance.
+    ///
+    /// Returns a [`usize`]. Think of this as a "unique" key which identifies
+    /// the newly inserted value.
+    ///
+    /// The `parent_index` is the index of the parent-value for which you want
+    /// this given value to be a child of.
+    ///
+    /// # Panics:
+    /// This function will panic if [`Self::push_root`] is not called first.
+    pub fn push(&mut self, value: V, parent_index: usize) -> usize {
+        let inner = self.0.as_mut().unwrap();
+        let length = inner.hooks.len();
 
-        if is_valid {
-            self.hooks.push((value, parent_index));
-            length - 1
-        } else {
-            panic!()
-        }
+        let parent_index = to_option(parent_index, length);
+        inner.hooks.push((value, parent_index));
+
+        length + 1
     }
 
     /// Extend the current [`TreeBuilder`] instance with the *entire* contents
@@ -119,30 +129,27 @@ impl<V> TreeBuilder<V> {
     ///
     /// The `parent_index` is the index of the parent-value for which you want
     /// this given value to be a child of.
-    pub fn extend(&mut self, mut other: Self, parent_index: Option<usize>) {
-        let number_of_incoming_hooks = other.hooks.len() + 1;
-        self.hooks.reserve(number_of_incoming_hooks);
+    pub fn extend(&mut self, other: Self, parent_index: usize) {
+        match (&mut self.0, other.0) {
+            (Some(inner), Some(mut other_inner)) => {
+                let length = inner.hooks.len();
 
-        let length = self.hooks.len();
+                let parent_index = to_option(parent_index, length);
 
-        let update_indices = |(value, parent_index): (V, Option<usize>)| {
-            let parent_index = parent_index.map_or(length, |parent_index| parent_index + length);
-            (value, Some(parent_index))
-        };
+                let number_of_incoming_hooks = other_inner.hooks.len() + 1;
+                inner.hooks.reserve(number_of_incoming_hooks);
 
-        let is_valid = match (parent_index, length) {
-            (Some(_), 0) => false,
-            (Some(parent_index), _) if parent_index <= length - 1 => true,
-            (Some(_), _) => false,
-            (None, _) => true,
-        };
+                inner.hooks.push((other_inner.root_value, parent_index));
 
-        if is_valid {
-            self.hooks.push((other.root_value, parent_index));
-            let other_hooks_iter = other.hooks.drain(..).map(update_indices);
-            self.hooks.extend(other_hooks_iter);
-        } else {
-            panic!()
+                let other_hooks_iter = other_inner.hooks.drain(..).map(|(value, parent_index)| {
+                    let parent_index =
+                        parent_index.map_or(length, |parent_index| parent_index + length);
+                    (value, Some(parent_index))
+                });
+                inner.hooks.extend(other_hooks_iter);
+            }
+            (None, Some(other_inner)) => self.0 = Some(other_inner),
+            (_, None) => (),
         }
     }
 
@@ -152,23 +159,41 @@ impl<V> TreeBuilder<V> {
     where
         K: Key,
     {
-        let length = self.hooks.len() + 1;
-        let mut tree = Tree::with_capacity(length);
+        match self.0 {
+            Some(inner) => {
+                let length = inner.hooks.len() + 1;
+                let mut tree = Tree::with_capacity(length);
 
-        let root_key = tree.insert_root(self.root_value);
+                let root_key = tree.insert_root(inner.root_value);
 
-        let mut keys = Vec::with_capacity(length - 1);
+                let mut keys = Vec::with_capacity(length - 1);
 
-        for (value, index) in self.hooks {
-            let parent_key = match index {
-                Some(index) => *keys.get(index).unwrap(),
-                None => root_key,
-            };
+                for (value, index) in inner.hooks {
+                    let parent_key = match index {
+                        Some(index) => *keys.get(index).unwrap(),
+                        None => root_key,
+                    };
+                    let key = tree.insert(value, parent_key).unwrap();
+                    keys.push(key);
+                }
 
-            let key = tree.insert(value, parent_key).unwrap();
-            keys.push(key);
+                tree
+            }
+            None => Tree::default(),
         }
+    }
+}
 
-        tree
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Inner<V> {
+    root_value: V,
+    hooks: Vec<(V, Option<usize>)>,
+}
+
+fn to_option(index: usize, max_index: usize) -> Option<usize> {
+    match (index, max_index) {
+        (0, _) => None,
+        _ if index <= max_index => Some(index - 1),
+        _ => panic!(),
     }
 }
