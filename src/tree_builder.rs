@@ -137,7 +137,8 @@ impl<V> TreeBuilder<V> {
         }
     }
 
-    /// Finish building the structure of the tree and turn it into an actual instance of a [`Tree`]!
+    /// Finish building the structure of the tree and turn it into an actual
+    /// instance of a [`Tree`]!
     pub fn finish<K>(self) -> Tree<K, V>
     where
         K: Key,
