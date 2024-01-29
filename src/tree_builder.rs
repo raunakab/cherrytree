@@ -117,7 +117,8 @@ impl<V> TreeBuilder<V> {
     /// this given value to be a child of.
     ///
     /// # Panics:
-    /// This function will panic if [`Self::push_root`] is not called first or if the given `parent_index` is out of bounds.
+    /// This function will panic if [`Self::push_root`] is not called first or
+    /// if the given `parent_index` is out of bounds.
     pub fn push(&mut self, value: V, parent_index: usize) -> usize {
         let (_, hooks) = self.0.as_mut().unwrap();
         let length = hooks.len();
