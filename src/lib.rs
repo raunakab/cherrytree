@@ -51,7 +51,7 @@ use slotmap::{Key, SlotMap};
 ///
 /// Since indexing requires a key, every insertion into a [`Tree`] will produce
 /// a *unique* key that can be used to identify the value being inserted.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Tree<K, V>
 where
     K: Key,
@@ -681,7 +681,7 @@ where
 ///
 /// It contains the actual underlying value, as well as its `parent_key` and
 /// `child_keys`.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct InnerNode<K, V> {
     /// The parent key of this value.
     ///
