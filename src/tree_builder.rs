@@ -80,8 +80,14 @@ use crate::Tree;
 /// // Finally, turn it into a [`Tree`] instance:
 /// let tree = tree_builder.finish::<DefaultKey>();
 /// ```
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TreeBuilder<V>(Vec<(V, Option<usize>)>);
+
+impl<V> Default for TreeBuilder<V> {
+    fn default() -> Self {
+        Self(vec![])
+    }
+}
 
 impl<V> TreeBuilder<V> {
     /// Push a new root "hook" into this [`TreeBuilder`] instance.
