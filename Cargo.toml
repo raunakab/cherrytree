@@ -7,8 +7,8 @@ repository = "https://github.com/raunakab/cherrytree"
 license-file = "LICENSE-BSD-3-CLAUSE"
 
 [dependencies]
-slotmap = "1.0.6"
-indexmap = "2.0.0"
+slotmap = "1.0"
+indexmap = "2.0"
 
 [features]
 decl_tree = []
