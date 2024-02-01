@@ -31,9 +31,6 @@
 //! # }
 //! ```
 
-/// APIs for building [`Tree`]s using the "builder" pattern.
-pub mod tree_builder;
-
 use std::mem::replace;
 
 use indexmap::IndexSet;
