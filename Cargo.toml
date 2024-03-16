@@ -1,9 +1,9 @@
 [package]
-name = "cherrytree"
+name = "tinytree"
 version = "0.1.0"
 edition = "2021"
-description = "A small, simple, and correct tree implementation."
-repository = "https://github.com/raunakab/cherrytree"
+description = "A tiny tree implementation"
+repository = "https://github.com/raunakab/tinytree"
 license-file = "LICENSE-BSD-3-CLAUSE"
 
 [dependencies]

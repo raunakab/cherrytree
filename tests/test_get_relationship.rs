@@ -1,7 +1,7 @@
 #[path = "../common/mod.rs"]
 mod common;
 
-use cherrytree::Relationship;
+use tinytree::Relationship;
 use common::DeclarativeTree;
 
 #[test]

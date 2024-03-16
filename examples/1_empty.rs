@@ -5,7 +5,7 @@
 //! use your own custom keys, consider using the [`slotmap::new_key_type`]
 //! macro.
 
-use cherrytree::Tree;
+use tinytree::Tree;
 use slotmap::DefaultKey;
 
 fn main() {
