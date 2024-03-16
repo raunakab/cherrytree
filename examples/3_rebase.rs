@@ -30,7 +30,7 @@
 //! Notice how the *entire* subtree of `4` gets shifted underneath `2`. The `4`
 //! subtree is now siblings with `6` and `7`.
 
-use cherrytree::Tree;
+use tinytree::Tree;
 use slotmap::DefaultKey;
 
 fn main() {

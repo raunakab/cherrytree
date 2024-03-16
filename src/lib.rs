@@ -4,7 +4,7 @@
 //!
 //! # Example:
 //! ```
-//! use cherrytree::{
+//! use tinytree::{
 //!     Node,
 //!     Tree,
 //! };

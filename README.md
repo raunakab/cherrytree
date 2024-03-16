@@ -1,8 +1,8 @@
-# `cherrytree`
+# `tinytree`
 A small, simple, and correct tree implementation.
 
 ## Overview:
-`cherrytree` is a library which provies a safe, simple, and correct API over a tree data structure, "`Tree`".
+`tinytree` is a library which provies a safe, simple, and correct API over a tree data structure, "`Tree`".
 
 `Tree` has been specifically designed in such a way that *each* node inside of it can be queried with a unique key in *constant time*.
 This proves highly suitable for applications where data needs to be grouped in a tree-like fashion while also being able to be retrieved as quickly as possible.
@@ -25,7 +25,7 @@ Certain popular applications include DOMs and non-cyclical solvers.
 ## Example:
 
 ```rust
-use cherrytree::{
+use tinytree::{
     Node,
     Tree,
 };
